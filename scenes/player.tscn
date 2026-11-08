@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/hand.tscn" id="2_hand"]
+
+[node name="Player" type="Node3D"]
+script = ExtResource("1_player")
+
+[node name="Head" type="Node3D" parent="."]
+position = Vector3(0, 1.7, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+current = true
+fov = 75.0
+
+[node name="RightHand" parent="Head/Camera3D" instance=ExtResource("2_hand")]
+position = Vector3(0.21, -0.22, -0.42)
+rotation_degrees = Vector3(-10, -12, -6)
+
+[node name="LeftHand" parent="Head/Camera3D" instance=ExtResource("2_hand")]
+position = Vector3(-0.21, -0.22, -0.42)
+rotation_degrees = Vector3(-10, 12, 6)
+scale = Vector3(-1, 1, 1)
