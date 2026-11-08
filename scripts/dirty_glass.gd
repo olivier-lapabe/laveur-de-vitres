@@ -32,7 +32,7 @@ const BARE_HAND_RESIDUE := 0.08
 const HAND_PICKUP := 0.9
 ## Dirt the hand picks up just by rubbing over it, per meter, even when
 ## nothing comes off (dry glass): touching grime soils the skin.
-const CONTACT_PICKUP := 0.6
+const CONTACT_PICKUP := 1.3
 ## Dust soils the hand this much compared to grease.
 const DUST_PICKUP := 0.1
 ## Radius of the patch one spit wets, in meters.
