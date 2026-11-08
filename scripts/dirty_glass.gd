@@ -12,23 +12,14 @@ const PIXELS_PER_METER := 160.0
 ## Resolution of the cleaning state: coarser, because a script updates it.
 const STATE_PIXELS_PER_METER := 100.0
 
-# Tuning of the bare-hand gesture. Amounts are fractions from 0 to 1.
-## Radius of the area a hand rubs, in meters.
-const HAND_RADIUS := 0.09
-## Share of the dirt under the middle of the hand removed per meter of rubbing, on wet glass.
+# Tuning shared by all tools; each tool's own values are in WashTool.
+# Amounts are fractions from 0 to 1.
+## Share of the dirt under the middle of a speed-1 tool removed per meter of
+## rubbing, on wet glass.
 const RUB_RATE := 7.0
 ## Rubbing dry glass works this much as well as rubbing wet glass: it works,
 ## slowly, while spit clears a patch in a few seconds.
 const DRY_RUB_FACTOR := 0.25
-## Dirt a fully dirty hand smears back on per meter of rubbing.
-const HAND_DEPOSIT := 0.3
-## Film that bare skin always leaves behind: glass washed by hand is never spotless.
-const BARE_HAND_RESIDUE := 0.08
-## How much dirtier the hand gets per unit of dirt it takes off the glass.
-const HAND_PICKUP := 0.1
-## Dirt the hand picks up just by rubbing over it, per meter, even when
-## little comes off (dry glass): touching grime soils the skin a little.
-const CONTACT_PICKUP := 0.05
 ## Thickness of the haze, compared with the marks (0 to 1), for the hand's pickup.
 const HAZE_THICKNESS := 0.5
 ## Radius of the patch one spit wets, in meters.
@@ -66,6 +57,8 @@ var _wet_spots: Array[Vector4] = []
 ## Whether the last rub was on dry glass, for the player's hint.
 var last_rub_was_dry := false
 
+var _bare_hands := WashTool.bare_hands()
+
 @onready var _material := material_override as ShaderMaterial
 
 
@@ -75,6 +68,17 @@ func _ready() -> void:
 	var marks_image := _make_marks_image()
 	_material.set_shader_parameter("marks_pattern", ImageTexture.create_from_image(marks_image))
 	_init_state(marks_image)
+	_send_wet_spots()
+
+
+## Dirties the glass again as it was at the start, and dries it.
+func reset() -> void:
+	_dirt_left.fill(1.0)
+	_smeared.fill(0.0)
+	_state_image.fill(Color(1, 1, 0, 0))
+	_state = _state_image.get_data()
+	_state_changed = true
+	_wet_spots.clear()
 	_send_wet_spots()
 
 
@@ -144,15 +148,18 @@ func dirt_at(uv: Vector2) -> float:
 	return minf(1.0, _thickness(i) * _dirt_left[i] + _smeared[i])
 
 
-## Rubs the glass with a bare hand centered on uv, over stroke_length meters.
-## hand_dirt (0 to 1) is how dirty the hand already is: a clean hand takes dirt
-## off, a dirty one smears it back on. hand_wet (0 to 1) is how wet the hand
-## is: a wet hand cleans like wet glass. Returns how much dirtier the hand gets.
-func rub(uv: Vector2, stroke_length: float, hand_dirt: float, hand_wet := 0.0) -> float:
+## Rubs the glass with a tool (bare hands by default) centered on uv, over
+## stroke_length meters. tool_dirt (0 to 1) is how dirty the tool already is: a
+## clean tool takes dirt off, a dirty one smears it back on. tool_wet (0 to 1)
+## is how wet it is: a wet tool cleans like wet glass. Returns how much dirtier
+## the tool gets.
+func rub(uv: Vector2, stroke_length: float, tool_dirt: float, tool_wet := 0.0, tool: WashTool = null) -> float:
+	if tool == null:
+		tool = _bare_hands
 	var center := Vector2(uv.x * _state_size.x, uv.y * _state_size.y)
-	var radius := HAND_RADIUS * STATE_PIXELS_PER_METER
+	var radius := tool.radius * STATE_PIXELS_PER_METER
 	var reach := ceili(radius)
-	var wet_factor := lerpf(DRY_RUB_FACTOR, 1.0, maxf(wetness_at(uv), hand_wet))
+	var wet_factor := lerpf(DRY_RUB_FACTOR, 1.0, maxf(wetness_at(uv), tool_wet))
 	var picked := 0.0
 	var pixels := 0
 	for py in range(maxi(0, int(center.y) - reach), mini(_state_size.y, int(center.y) + reach + 1)):
@@ -161,23 +168,24 @@ func rub(uv: Vector2, stroke_length: float, hand_dirt: float, hand_wet := 0.0) -
 			if distance >= 1.0:
 				continue
 			var weight := 1.0 - distance * distance
-			var effect := clampf(stroke_length * RUB_RATE * weight * wet_factor, 0.0, 1.0)
+			var effect := clampf(stroke_length * RUB_RATE * tool.rub_speed * weight * wet_factor, 0.0, 1.0)
 			var p := py * _state_size.x + px
 			var thickness := _thickness(p)
 			var dirt_left := _dirt_left[p]
 			var smeared := _smeared[p]
 
-			# A clean hand takes dirt off; a dirty one mostly pushes it around and
+			# A clean tool takes dirt off; a dirty one mostly pushes it around and
 			# leaves its own dirt behind.
-			var removed := dirt_left * effect * (1.0 - hand_dirt)
-			var smear_removed := smeared * effect * (1.0 - hand_dirt)
-			smeared += hand_dirt * HAND_DEPOSIT * stroke_length * weight - smear_removed
-			var residue := BARE_HAND_RESIDUE * weight * (0.6 + 0.4 * _breakup.get_noise_2d(px * 3.0, py * 3.0))
+			var removed := dirt_left * effect * (1.0 - tool_dirt)
+			var smear_removed := smeared * effect * (1.0 - tool_dirt)
+			smeared += tool_dirt * tool.deposit * stroke_length * weight - smear_removed
+			# Every tool leaves a faint film; how faint is its finish.
+			var residue := tool.residue * weight * (0.6 + 0.4 * _breakup.get_noise_2d(px * 3.0, py * 3.0))
 			smeared = clampf(maxf(smeared, residue), 0.0, 1.0)
 			dirt_left -= removed
 
 			picked += removed * thickness + smear_removed
-			picked += (dirt_left * thickness + smeared) * weight * stroke_length * CONTACT_PICKUP
+			picked += (dirt_left * thickness + smeared) * weight * stroke_length * tool.contact_pickup
 			pixels += 1
 			_dirt_left[p] = dirt_left
 			_smeared[p] = smeared
@@ -185,7 +193,7 @@ func rub(uv: Vector2, stroke_length: float, hand_dirt: float, hand_wet := 0.0) -
 			_state[p * 4 + 3] = int(smeared * 255.0 + 0.5)
 	_state_changed = true
 	last_rub_was_dry = wet_factor < 0.5
-	return picked / maxf(pixels, 1) * HAND_PICKUP
+	return picked / maxf(pixels, 1) * tool.pickup
 
 
 ## How thick the original dirt is at state pixel i: the haze plus any mark.

@@ -25,6 +25,7 @@ func _run() -> void:
 	_check_dry_rubbing_stays_hard()
 	_check_dry_rubbing_dirties_the_hand()
 	_check_wet_hands_clean_faster()
+	_check_cloth_beats_bare_hands()
 	print("Gameplay tests: %d failed" % _failures)
 	quit(1 if _failures > 0 else 0)
 
@@ -119,6 +120,36 @@ func _check_wet_hands_clean_faster() -> void:
 	var removed_dry := before - glass.dirt_at(with_dry_hand)
 	var removed_wet := before - glass.dirt_at(with_wet_hand)
 	_expect(removed_wet > removed_dry * 2.0, "wet hands clean dry glass faster (wet hand %.2f, dry hand %.2f)" % [removed_wet, removed_dry])
+
+
+## The cloth cleans faster, leaves a fainter film and gets dirty more slowly.
+func _check_cloth_beats_bare_hands() -> void:
+	var glass := _new_glass()
+	var cloth := WashTool.cloth()
+	var hands := WashTool.bare_hands()
+	var by_hand := Vector2(0.25, 0.1)
+	var by_cloth := Vector2(0.75, 0.1)
+	var before := glass.dirt_at(by_hand)
+	var hand_dirt := 0.0
+	var cloth_dirt := 0.0
+	for i in 10:
+		var offset := Vector2(0.01 if i % 2 == 0 else -0.01, 0.0)
+		hand_dirt += glass.rub(by_hand + offset, 0.02, 0.0, 0.0, hands)
+		cloth_dirt += glass.rub(by_cloth + offset, 0.02, 0.0, 0.0, cloth)
+	var removed_by_hand := before - glass.dirt_at(by_hand)
+	var removed_by_cloth := before - glass.dirt_at(by_cloth)
+	_expect(removed_by_cloth > removed_by_hand * 1.5, "the cloth cleans faster (cloth %.2f, hands %.2f)" % [removed_by_cloth, removed_by_hand])
+	_expect(cloth_dirt < hand_dirt, "the cloth gets dirty more slowly (cloth %.3f, hands %.3f)" % [cloth_dirt, hand_dirt])
+	glass.spit(by_hand)
+	glass.spit(by_cloth)
+	for i in 80:
+		var offset := Vector2(0.01 if i % 2 == 0 else -0.01, 0.0)
+		glass.rub(by_hand + offset, 0.02, 0.0, 1.0, hands)
+		glass.rub(by_cloth + offset, 0.02, 0.0, 1.0, cloth)
+	_expect(glass.dirt_at(by_cloth) < glass.dirt_at(by_hand) * 0.6,
+		"the cloth leaves a fainter film (cloth %.3f, hands %.3f)" % [glass.dirt_at(by_cloth), glass.dirt_at(by_hand)])
+	glass.reset()
+	_expect(is_equal_approx(glass.dirt_at(by_cloth), before), "a new round dirties the glass again (%.2f)" % glass.dirt_at(by_cloth))
 
 
 ## The spit and the hand must land on the glass right under the crosshair.

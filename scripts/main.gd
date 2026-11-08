@@ -9,6 +9,7 @@ const BuildInfo := preload("res://scripts/build_info.gd")
 @onready var _start_overlay: Control = $HUD/StartOverlay
 @onready var _crosshair: Control = $HUD/Crosshair
 @onready var _hint: Label = $HUD/Hint
+@onready var _round: Label = $HUD/Round
 @onready var _debug: Label = $HUD/Debug
 @onready var _aim_marker: Node3D = $AimMarker
 @onready var _player: WindowWasher = $Player
@@ -54,6 +55,7 @@ func _process(_delta: float) -> void:
 	_start_overlay.visible = not playing
 	_crosshair.visible = playing and not _player.is_rubbing()
 	_hint.text = _player.hint if playing else ""
+	_round.text = _player.round_title()
 	if _debug.visible:
 		_debug.text = _player.debug_text()
 	var aim: Variant = _player.aim_point() if _debug.visible else null
