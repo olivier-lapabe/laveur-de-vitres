@@ -9,6 +9,7 @@ const BuildInfo := preload("res://scripts/build_info.gd")
 @onready var _start_overlay: Control = $HUD/StartOverlay
 @onready var _crosshair: Control = $HUD/Crosshair
 @onready var _hint: Label = $HUD/Hint
+@onready var _debug: Label = $HUD/Debug
 @onready var _player: WindowWasher = $Player
 @onready var _glass: DirtyGlass = $Storefront/Glass
 
@@ -28,6 +29,11 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key != null and key.pressed and not key.echo and key.physical_keycode == KEY_F3:
+		_debug.visible = not _debug.visible
+		get_viewport().set_input_as_handled()
+		return
 	var click := event as InputEventMouseButton
 	if click != null and click.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -47,3 +53,5 @@ func _process(_delta: float) -> void:
 	_start_overlay.visible = not playing
 	_crosshair.visible = playing and not _player.is_rubbing()
 	_hint.text = _player.hint if playing else ""
+	if _debug.visible:
+		_debug.text = _player.debug_text()

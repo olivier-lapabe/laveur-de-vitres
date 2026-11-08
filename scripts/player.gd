@@ -71,6 +71,22 @@ func is_rubbing() -> bool:
 	return _rubbing
 
 
+## Live values for the F3 debug panel (in French, for the PO's playtests).
+func debug_text() -> String:
+	var text := "Saleté des mains : %d %%" % roundi(hand_dirt * 100.0)
+	var hit := _glass_hit(_rub_cursor if _rubbing else Vector2.ZERO)
+	if hit.is_empty():
+		return text + "\nVitre : pas visée"
+	var uv: Vector2 = hit.uv
+	return text + "\nDistance à la vitre : %.2f m%s\nHumidité ici : %d %%\nPoussière restante ici : %d %%\nGraisse ici : %d %%" % [
+		hit.distance,
+		"" if hit.distance <= hand_reach else " (trop loin pour frotter)",
+		roundi(glass.wetness_at(uv) * 100.0),
+		roundi(glass.dust_left_at(uv) * 100.0),
+		roundi(glass.grease_at(uv) * 100.0),
+	]
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return

@@ -48,9 +48,14 @@ var _grease := PackedByteArray()
 var _pattern_size := Vector2i.ZERO
 var _breakup := FastNoiseLite.new()
 
-## RGBA8 per state pixel. R: dust left, G: original grease left,
-## A: grease spread by hands (B is unused).
+## RGBA8 per state pixel, sent to the shader. R: dust left, G: original grease
+## left, A: grease spread by hands (B is unused).
 var _state := PackedByteArray()
+## The same values as floats, for the cleaning maths: rounding them to bytes on
+## every rub made even useless rubbing wear the dirt away.
+var _dust := PackedFloat32Array()
+var _grease_left := PackedFloat32Array()
+var _spread := PackedFloat32Array()
 var _state_size := Vector2i.ZERO
 var _state_image: Image
 var _state_texture: ImageTexture
@@ -137,13 +142,13 @@ func wetness_at(uv: Vector2) -> float:
 
 ## How much of the dust is left at uv, from 1 (untouched) to 0.
 func dust_left_at(uv: Vector2) -> float:
-	return _state[_state_index(uv) * 4] / 255.0
+	return _dust[_state_index(uv)]
 
 
 ## Grease at uv: what is left of the original marks plus what hands spread.
 func grease_at(uv: Vector2) -> float:
 	var i := _state_index(uv)
-	return minf(1.0, _grease_base[i] / 255.0 * _state[i * 4 + 1] / 255.0 + _state[i * 4 + 3] / 255.0)
+	return minf(1.0, _grease_base[i] / 255.0 * _grease_left[i] + _spread[i])
 
 
 ## Rubs the glass with a bare hand centered on uv, over stroke_length meters.
@@ -163,11 +168,11 @@ func rub(uv: Vector2, stroke_length: float, hand_dirt: float) -> float:
 				continue
 			var weight := 1.0 - distance * distance
 			var effect := clampf(stroke_length * RUB_RATE * weight * wet_factor, 0.0, 1.0)
-			var i := (py * _state_size.x + px) * 4
-			var dust := _state[i] / 255.0
-			var grease_left := _state[i + 1] / 255.0
-			var spread := _state[i + 3] / 255.0
-			var base := _grease_base[py * _state_size.x + px] / 255.0
+			var p := py * _state_size.x + px
+			var dust := _dust[p]
+			var grease_left := _grease_left[p]
+			var spread := _spread[p]
+			var base := _grease_base[p] / 255.0
 
 			# Dust comes straight off.
 			var dust_removed := dust * effect
@@ -182,10 +187,14 @@ func rub(uv: Vector2, stroke_length: float, hand_dirt: float) -> float:
 
 			picked += dust_removed * DUST_PICKUP + base * grease_loosened * (1.0 - GREASE_SPREAD) + spread_removed
 			pixels += 1
-			# Round down, so that even light rubbing always makes progress.
-			_state[i] = int((dust - dust_removed) * 255.0)
-			_state[i + 1] = int((grease_left - grease_loosened) * 255.0)
-			_state[i + 3] = int(spread * 255.0 + 0.5)
+			dust -= dust_removed
+			grease_left -= grease_loosened
+			_dust[p] = dust
+			_grease_left[p] = grease_left
+			_spread[p] = spread
+			_state[p * 4] = int(dust * 255.0 + 0.5)
+			_state[p * 4 + 1] = int(grease_left * 255.0 + 0.5)
+			_state[p * 4 + 3] = int(spread * 255.0 + 0.5)
 	_state_changed = true
 	last_rub_was_dry = wet_factor < 0.5
 	return picked / maxf(pixels, 1) * HAND_PICKUP
@@ -202,6 +211,13 @@ func _init_state(grease_image: Image) -> void:
 	_state_image = Image.create_empty(_state_size.x, _state_size.y, false, Image.FORMAT_RGBA8)
 	_state_image.fill(Color(1, 1, 0, 0))
 	_state = _state_image.get_data()
+	var pixels := _state_size.x * _state_size.y
+	_dust.resize(pixels)
+	_dust.fill(1.0)
+	_grease_left.resize(pixels)
+	_grease_left.fill(1.0)
+	_spread.resize(pixels)
+	_spread.fill(0.0)
 	_state_texture = ImageTexture.create_from_image(_state_image)
 	_material.set_shader_parameter("dirt_state", _state_texture)
 	var base := grease_image.duplicate() as Image
