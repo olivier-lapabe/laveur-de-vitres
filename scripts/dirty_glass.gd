@@ -49,10 +49,10 @@ func _make_grease_pattern() -> ImageTexture:
 	_smear(Vector2(1.15, 1.28), Vector2(0.34, 0.07), -12.0, 0.65)
 	_smear(Vector2(2.3, 1.55), Vector2(0.32, 0.07), 8.0, 0.6)
 	# Adults leaning on the glass to look inside.
-	_handprint(Vector2(2.45, 1.35), 1.0, -8.0, 0.95)
-	_handprint(Vector2(0.55, 1.5), 1.0, 12.0, 0.85)
-	_handprint(Vector2(1.35, 1.65), 1.0, -4.0, 0.9)
-	_handprint(Vector2(1.95, 1.72), 1.0, 6.0, 0.85)
+	_handprint(Vector2(2.45, 1.35), 1.1, -8.0, 0.95)
+	_handprint(Vector2(0.55, 1.5), 1.1, 12.0, 0.85)
+	_handprint(Vector2(1.35, 1.65), 1.1, -4.0, 0.9)
+	_handprint(Vector2(1.95, 1.72), 1.1, 6.0, 0.85)
 	# Children pressing their hands and nose against the bakery window.
 	_handprint(Vector2(1.55, 0.95), 0.65, -15.0, 1.0)
 	_handprint(Vector2(1.95, 0.9), 0.65, 10.0, 1.0)

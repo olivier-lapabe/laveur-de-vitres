@@ -7,7 +7,7 @@ render_mode blend_mix, cull_back;
 
 uniform vec4 glass_color : source_color = vec4(0.85, 0.92, 0.96, 0.05);
 uniform vec4 dust_color : source_color = vec4(0.66, 0.6, 0.5, 1.0);
-uniform vec4 grease_color : source_color = vec4(0.38, 0.31, 0.17, 1.0);
+uniform vec4 grease_color : source_color = vec4(0.3, 0.24, 0.12, 1.0);
 uniform float dust_strength : hint_range(0.0, 1.0) = 0.9;
 uniform float grease_strength : hint_range(0.0, 1.0) = 1.0;
 // Glass size in meters, so the dust grain keeps a real-world scale.
@@ -35,14 +35,15 @@ float dust_at(vec2 uv) {
 }
 
 void fragment() {
-	float grease = texture(grease_pattern, UV).r * grease_strength;
+	// Boost faint marks so even a light touch reads as grease.
+	float grease = smoothstep(0.0, 0.55, texture(grease_pattern, UV).r) * grease_strength;
 	// Hands and sleeves pushed the dust aside where they left grease.
 	float dust = dust_at(UV) * dust_strength * (1.0 - grease * 0.75);
 
 	vec3 color = mix(glass_color.rgb, dust_color.rgb, dust);
 	float alpha = mix(glass_color.a, 0.8, dust);
 	color = mix(color, grease_color.rgb, grease);
-	alpha = mix(alpha, 0.6, grease);
+	alpha = mix(alpha, 0.85, grease);
 
 	ALBEDO = color;
 	ALPHA = alpha;
