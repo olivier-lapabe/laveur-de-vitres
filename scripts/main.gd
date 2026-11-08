@@ -1,18 +1,15 @@
 extends Node3D
-## Starting scene: a placeholder storefront at the foot of the tower.
-## It only proves that the build pipeline renders a 3D scene on Web and Windows.
+## The street at the foot of the tower, with one dirty bakery window.
+## Captures the mouse on click and shows the start overlay while it is free.
 
 const BuildInfo := preload("res://scripts/build_info.gd")
 
-@onready var _camera: Camera3D = $Camera3D
-@onready var _sun: DirectionalLight3D = $Sun
 @onready var _info: Label = $HUD/Info
+@onready var _start_overlay: Control = $HUD/StartOverlay
+@onready var _crosshair: Control = $HUD/Crosshair
 
 
 func _ready() -> void:
-	_sun.rotation_degrees = Vector3(-50.0, 30.0, 0.0)
-	_camera.look_at(Vector3(0.0, 1.6, 0.0))
-
 	var version := str(ProjectSettings.get_setting("application/config/version", "?"))
 	_info.text = "Laveur de vitres — prototype du geste\nVersion %s (%s) · Godot %s" % [
 		version,
@@ -21,3 +18,24 @@ func _ready() -> void:
 	]
 	# CI looks for this line to confirm the scene ran.
 	print("Laveur de vitres %s (%s): main scene ready" % [version, BuildInfo.COMMIT])
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel"):
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _process(_delta: float) -> void:
+	# In the browser, Escape releases the mouse without Godot seeing the key.
+	var playing := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	_start_overlay.visible = not playing
+	_crosshair.visible = playing

@@ -1,0 +1,65 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_skin"]
+albedo_color = Color(0.72, 0.52, 0.41, 1)
+roughness = 0.75
+
+[sub_resource type="StandardMaterial3D" id="Material_sleeve"]
+albedo_color = Color(0.16, 0.22, 0.34, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="Mesh_palm"]
+material = SubResource("Material_skin")
+size = Vector3(0.085, 0.095, 0.028)
+
+[sub_resource type="CapsuleMesh" id="Mesh_finger_short"]
+material = SubResource("Material_skin")
+radius = 0.0095
+height = 0.062
+
+[sub_resource type="CapsuleMesh" id="Mesh_finger_long"]
+material = SubResource("Material_skin")
+radius = 0.0095
+height = 0.076
+
+[sub_resource type="CapsuleMesh" id="Mesh_thumb"]
+material = SubResource("Material_skin")
+radius = 0.011
+height = 0.058
+
+[sub_resource type="CylinderMesh" id="Mesh_sleeve"]
+material = SubResource("Material_sleeve")
+top_radius = 0.04
+bottom_radius = 0.047
+height = 0.24
+
+[node name="Hand" type="Node3D"]
+
+[node name="Palm" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_palm")
+
+[node name="Index" type="MeshInstance3D" parent="."]
+position = Vector3(-0.031, 0.072, 0)
+mesh = SubResource("Mesh_finger_short")
+
+[node name="Middle" type="MeshInstance3D" parent="."]
+position = Vector3(-0.011, 0.079, 0)
+mesh = SubResource("Mesh_finger_long")
+
+[node name="Ring" type="MeshInstance3D" parent="."]
+position = Vector3(0.011, 0.076, 0)
+mesh = SubResource("Mesh_finger_long")
+
+[node name="Little" type="MeshInstance3D" parent="."]
+position = Vector3(0.031, 0.068, 0)
+mesh = SubResource("Mesh_finger_short")
+
+[node name="Thumb" type="MeshInstance3D" parent="."]
+position = Vector3(-0.052, 0.006, 0.004)
+rotation_degrees = Vector3(0, 0, 35)
+mesh = SubResource("Mesh_thumb")
+
+[node name="Sleeve" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.16, 0.035)
+rotation_degrees = Vector3(-18, 0, 0)
+mesh = SubResource("Mesh_sleeve")

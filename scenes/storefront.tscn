@@ -1,0 +1,183 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/dirty_glass.gdshader" id="1_glass_shader"]
+[ext_resource type="Script" path="res://scripts/dirty_glass.gd" id="2_dirty_glass"]
+
+[sub_resource type="StandardMaterial3D" id="Material_frame"]
+albedo_color = Color(0.17, 0.3, 0.24, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Material_wood"]
+albedo_color = Color(0.45, 0.3, 0.18, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_back_wall"]
+albedo_color = Color(0.7, 0.6, 0.48, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Material_bread"]
+albedo_color = Color(0.8, 0.55, 0.27, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="Mesh_plinth"]
+material = SubResource("Material_frame")
+size = Vector3(3.5, 0.5, 0.85)
+
+[sub_resource type="BoxMesh" id="Mesh_top"]
+material = SubResource("Material_frame")
+size = Vector3(3.5, 0.15, 0.85)
+
+[sub_resource type="BoxMesh" id="Mesh_side"]
+material = SubResource("Material_frame")
+size = Vector3(0.15, 2.85, 0.85)
+
+[sub_resource type="BoxMesh" id="Mesh_sign"]
+material = SubResource("Material_frame")
+size = Vector3(3.5, 0.6, 0.2)
+
+[sub_resource type="QuadMesh" id="Mesh_back_wall"]
+material = SubResource("Material_back_wall")
+size = Vector2(3.2, 2.2)
+
+[sub_resource type="BoxMesh" id="Mesh_display_base"]
+material = SubResource("Material_wood")
+size = Vector3(3.2, 0.04, 0.78)
+
+[sub_resource type="BoxMesh" id="Mesh_shelf"]
+material = SubResource("Material_wood")
+size = Vector3(3.2, 0.03, 0.4)
+
+[sub_resource type="CapsuleMesh" id="Mesh_baguette"]
+material = SubResource("Material_bread")
+radius = 0.035
+height = 0.62
+
+[sub_resource type="SphereMesh" id="Mesh_loaf"]
+material = SubResource("Material_bread")
+radius = 0.12
+height = 0.15
+
+[sub_resource type="SphereMesh" id="Mesh_roll"]
+material = SubResource("Material_bread")
+radius = 0.055
+height = 0.07
+
+[sub_resource type="ShaderMaterial" id="Material_glass"]
+render_priority = 0
+shader = ExtResource("1_glass_shader")
+
+[sub_resource type="QuadMesh" id="Mesh_glass"]
+size = Vector2(3.2, 2.2)
+
+[node name="Storefront" type="Node3D"]
+
+[node name="Frame" type="Node3D" parent="."]
+
+[node name="Plinth" type="MeshInstance3D" parent="Frame"]
+position = Vector3(0, 0.25, 0.425)
+mesh = SubResource("Mesh_plinth")
+
+[node name="Top" type="MeshInstance3D" parent="Frame"]
+position = Vector3(0, 2.775, 0.425)
+mesh = SubResource("Mesh_top")
+
+[node name="Left" type="MeshInstance3D" parent="Frame"]
+position = Vector3(-1.675, 1.425, 0.425)
+mesh = SubResource("Mesh_side")
+
+[node name="Right" type="MeshInstance3D" parent="Frame"]
+position = Vector3(1.675, 1.425, 0.425)
+mesh = SubResource("Mesh_side")
+
+[node name="Sign" type="MeshInstance3D" parent="Frame"]
+position = Vector3(0, 3.25, 0.1)
+mesh = SubResource("Mesh_sign")
+
+[node name="SignText" type="Label3D" parent="Frame"]
+position = Vector3(0, 3.25, 0.21)
+modulate = Color(1, 0.95, 0.85, 1)
+text = "BOULANGERIE"
+font_size = 72
+outline_size = 16
+
+[node name="Display" type="Node3D" parent="."]
+
+[node name="BackWall" type="MeshInstance3D" parent="Display"]
+position = Vector3(0, 1.6, 0.02)
+mesh = SubResource("Mesh_back_wall")
+
+[node name="Base" type="MeshInstance3D" parent="Display"]
+position = Vector3(0, 0.48, 0.4)
+mesh = SubResource("Mesh_display_base")
+
+[node name="LowShelf" type="MeshInstance3D" parent="Display"]
+position = Vector3(0, 1.25, 0.22)
+mesh = SubResource("Mesh_shelf")
+
+[node name="HighShelf" type="MeshInstance3D" parent="Display"]
+position = Vector3(0, 1.9, 0.22)
+mesh = SubResource("Mesh_shelf")
+
+[node name="Baguette1" type="MeshInstance3D" parent="Display"]
+position = Vector3(-0.95, 0.535, 0.42)
+rotation_degrees = Vector3(0, 8, 90)
+mesh = SubResource("Mesh_baguette")
+
+[node name="Baguette2" type="MeshInstance3D" parent="Display"]
+position = Vector3(-0.9, 0.535, 0.55)
+rotation_degrees = Vector3(0, -5, 90)
+mesh = SubResource("Mesh_baguette")
+
+[node name="Baguette3" type="MeshInstance3D" parent="Display"]
+position = Vector3(-0.92, 0.6, 0.48)
+rotation_degrees = Vector3(0, 2, 90)
+mesh = SubResource("Mesh_baguette")
+
+[node name="Loaf1" type="MeshInstance3D" parent="Display"]
+position = Vector3(0.25, 0.575, 0.45)
+mesh = SubResource("Mesh_loaf")
+
+[node name="Loaf2" type="MeshInstance3D" parent="Display"]
+position = Vector3(0.65, 0.575, 0.5)
+mesh = SubResource("Mesh_loaf")
+
+[node name="Loaf3" type="MeshInstance3D" parent="Display"]
+position = Vector3(-0.4, 1.95, 0.22)
+mesh = SubResource("Mesh_loaf")
+
+[node name="Loaf4" type="MeshInstance3D" parent="Display"]
+position = Vector3(0.6, 1.95, 0.22)
+mesh = SubResource("Mesh_loaf")
+
+[node name="Roll1" type="MeshInstance3D" parent="Display"]
+position = Vector3(-1.1, 1.3, 0.22)
+mesh = SubResource("Mesh_roll")
+
+[node name="Roll2" type="MeshInstance3D" parent="Display"]
+position = Vector3(-0.95, 1.3, 0.22)
+mesh = SubResource("Mesh_roll")
+
+[node name="Roll3" type="MeshInstance3D" parent="Display"]
+position = Vector3(-0.8, 1.3, 0.22)
+mesh = SubResource("Mesh_roll")
+
+[node name="Roll4" type="MeshInstance3D" parent="Display"]
+position = Vector3(0.9, 1.3, 0.22)
+mesh = SubResource("Mesh_roll")
+
+[node name="Roll5" type="MeshInstance3D" parent="Display"]
+position = Vector3(1.05, 1.3, 0.22)
+mesh = SubResource("Mesh_roll")
+
+[node name="WarmLight" type="OmniLight3D" parent="Display"]
+position = Vector3(0, 2.55, 0.6)
+light_color = Color(1, 0.84, 0.6, 1)
+light_energy = 0.45
+omni_range = 1.8
+
+[node name="Glass" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.6, 0.8)
+cast_shadow = 0
+mesh = SubResource("Mesh_glass")
+material_override = SubResource("Material_glass")
+script = ExtResource("2_dirty_glass")
