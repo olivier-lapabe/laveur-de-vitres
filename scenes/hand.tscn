@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [sub_resource type="StandardMaterial3D" id="Material_skin"]
-albedo_color = Color(0.87, 0.67, 0.55, 1)
+albedo_color = Color(0.72, 0.52, 0.41, 1)
 roughness = 0.75
 
 [sub_resource type="StandardMaterial3D" id="Material_sleeve"]

@@ -12,7 +12,7 @@ albedo_color = Color(0.45, 0.3, 0.18, 1)
 roughness = 0.8
 
 [sub_resource type="StandardMaterial3D" id="Material_back_wall"]
-albedo_color = Color(0.86, 0.78, 0.64, 1)
+albedo_color = Color(0.7, 0.6, 0.48, 1)
 roughness = 0.9
 
 [sub_resource type="StandardMaterial3D" id="Material_bread"]
@@ -170,10 +170,10 @@ position = Vector3(1.05, 1.3, 0.22)
 mesh = SubResource("Mesh_roll")
 
 [node name="WarmLight" type="OmniLight3D" parent="Display"]
-position = Vector3(0, 2.5, 0.45)
+position = Vector3(0, 2.55, 0.6)
 light_color = Color(1, 0.84, 0.6, 1)
-light_energy = 0.9
-omni_range = 2.2
+light_energy = 0.45
+omni_range = 1.8
 
 [node name="Glass" type="MeshInstance3D" parent="."]
 position = Vector3(0, 1.6, 0.8)

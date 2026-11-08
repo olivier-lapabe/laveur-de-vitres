@@ -14,10 +14,10 @@ current = true
 fov = 75.0
 
 [node name="RightHand" parent="Head/Camera3D" instance=ExtResource("2_hand")]
-position = Vector3(0.21, -0.22, -0.42)
-rotation_degrees = Vector3(-10, -12, -6)
+position = Vector3(0.27, -0.3, -0.46)
+rotation_degrees = Vector3(-14, -18, -12)
 
 [node name="LeftHand" parent="Head/Camera3D" instance=ExtResource("2_hand")]
-position = Vector3(-0.21, -0.22, -0.42)
-rotation_degrees = Vector3(-10, 12, 6)
+position = Vector3(-0.27, -0.3, -0.46)
+rotation_degrees = Vector3(-14, 18, 12)
 scale = Vector3(-1, 1, 1)
