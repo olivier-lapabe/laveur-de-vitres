@@ -65,14 +65,14 @@ void fragment() {
 	float wet = wetness_at(UV);
 
 	// Wet dust turns darker and more see-through.
-	vec3 dust_tint = mix(dust_color.rgb, dust_color.rgb * 0.55, wet);
+	vec3 dust_tint = mix(dust_color.rgb, dust_color.rgb * 0.4, wet);
 	vec3 color = mix(glass_color.rgb, dust_tint, dust);
-	float alpha = mix(glass_color.a, 0.8 * (1.0 - 0.45 * wet), dust);
+	float alpha = mix(glass_color.a, 0.8 * (1.0 - 0.6 * wet), dust);
 	color = mix(color, grease_color.rgb, grease);
 	alpha = mix(alpha, 0.85, grease);
 	// A thin film of water catches a little light.
-	color = mix(color, vec3(0.75, 0.82, 0.88), wet * 0.15);
-	alpha = max(alpha, wet * 0.12);
+	color = mix(color, vec3(0.75, 0.82, 0.88), wet * 0.25);
+	alpha = max(alpha, wet * 0.18);
 
 	ALBEDO = color;
 	ALPHA = alpha;

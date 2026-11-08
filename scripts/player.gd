@@ -16,7 +16,7 @@ extends Node3D
 ## The glass to wash.
 @export var glass: DirtyGlass
 ## How far a hand reaches from the eyes, in meters.
-@export var hand_reach := 1.1
+@export var hand_reach := 1.6
 ## How far the player can spit, in meters.
 @export var spit_reach := 2.5
 
