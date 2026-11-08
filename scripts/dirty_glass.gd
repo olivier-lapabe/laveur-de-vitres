@@ -1,10 +1,40 @@
+class_name DirtyGlass
 extends MeshInstance3D
-## The storefront glass and its dirt. Both dirt patterns are generated once, at
-## startup: noise for the dust haze, and grease marks stamped where people
-## touched the glass.
+## The storefront glass and its dirt.
+##
+## Two dirt patterns are generated at startup: noise for the dust haze, and
+## grease marks stamped where people touched the glass. A state texture then
+## records what the player's hands did to them, and spit leaves wet spots that
+## dry after a while.
 
 ## Pattern resolution for the grease marks.
 const PIXELS_PER_METER := 160.0
+## Resolution of the cleaning state: coarser, because a script updates it.
+const STATE_PIXELS_PER_METER := 100.0
+
+# Tuning of the bare-hand gesture. Amounts are fractions from 0 to 1.
+## Radius of the area a hand rubs, in meters.
+const HAND_RADIUS := 0.09
+## Share of the dirt under the middle of the hand removed per meter of rubbing, on wet glass.
+const RUB_RATE := 8.0
+## Rubbing dry glass works this much as well as rubbing wet glass.
+const DRY_RUB_FACTOR := 0.3
+## Grease comes off this much as easily as dust.
+const GREASE_RESISTANCE := 0.6
+## Share of the grease loosened by the hand that gets spread around instead of picked up.
+const GREASE_SPREAD := 0.6
+## Grease a fully dirty hand leaves per meter of rubbing.
+const HAND_DEPOSIT := 1.5
+## Film that bare skin always leaves behind: glass washed by hand is never spotless.
+const BARE_HAND_RESIDUE := 0.08
+## How much dirtier the hand gets per unit of dirt it takes off the glass.
+const HAND_PICKUP := 0.25
+## Radius of the patch one spit wets, in meters.
+const SPIT_RADIUS := 0.22
+## Seconds before spit has dried.
+const SPIT_DRY_SECONDS := 15.0
+## Wet spots tracked at once; must match the shader's wet_spots array.
+const MAX_WET_SPOTS := 8
 
 ## Glass size in meters; must match the QuadMesh.
 @export var glass_size := Vector2(3.2, 2.2)
@@ -15,12 +45,176 @@ var _grease := PackedByteArray()
 var _pattern_size := Vector2i.ZERO
 var _breakup := FastNoiseLite.new()
 
+## RGBA8 per state pixel. R: dust left, G: original grease left,
+## A: grease spread by hands (B is unused).
+var _state := PackedByteArray()
+var _state_size := Vector2i.ZERO
+var _state_image: Image
+var _state_texture: ImageTexture
+var _state_changed := false
+## The grease pattern at state resolution, to know how much grease a pixel holds.
+var _grease_base := PackedByteArray()
+## x, y: UV of the spot; z: radius in meters; w: seconds before it is dry.
+var _wet_spots: Array[Vector4] = []
+
+@onready var _material := material_override as ShaderMaterial
+
 
 func _ready() -> void:
-	var glass_material := material_override as ShaderMaterial
-	glass_material.set_shader_parameter("glass_size", glass_size)
-	glass_material.set_shader_parameter("noise_texture", _make_noise_texture())
-	glass_material.set_shader_parameter("grease_pattern", _make_grease_pattern())
+	_material.set_shader_parameter("glass_size", glass_size)
+	_material.set_shader_parameter("noise_texture", _make_noise_texture())
+	var grease_image := _make_grease_image()
+	_material.set_shader_parameter("grease_pattern", ImageTexture.create_from_image(grease_image))
+	_init_state(grease_image)
+	_send_wet_spots()
+
+
+func _process(delta: float) -> void:
+	if not _wet_spots.is_empty():
+		for i in range(_wet_spots.size() - 1, -1, -1):
+			var spot := _wet_spots[i]
+			spot.w -= delta
+			if spot.w <= 0.0:
+				_wet_spots.remove_at(i)
+			else:
+				_wet_spots[i] = spot
+		_send_wet_spots()
+	if _state_changed:
+		_state_image.set_data(_state_size.x, _state_size.y, false, Image.FORMAT_RGBA8, _state)
+		_state_texture.update(_state_image)
+		_state_changed = false
+
+
+## Where a ray meets the glass, as {"point", "uv", "distance"}; empty if it misses.
+func intersect(origin: Vector3, direction: Vector3) -> Dictionary:
+	var normal := get_normal()
+	var facing := normal.dot(direction)
+	if absf(facing) < 0.0001:
+		return {}
+	var distance := normal.dot(global_position - origin) / facing
+	if distance <= 0.0:
+		return {}
+	var point := origin + direction * distance
+	var uv := uv_at(point)
+	if uv.x < 0.0 or uv.x > 1.0 or uv.y < 0.0 or uv.y > 1.0:
+		return {}
+	return {"point": point, "uv": uv, "distance": distance}
+
+
+## The glass coordinates (0 to 1, from the top left) of a point on its plane.
+func uv_at(point: Vector3) -> Vector2:
+	var local := to_local(point)
+	return Vector2(local.x / glass_size.x + 0.5, 0.5 - local.y / glass_size.y)
+
+
+## The direction the glass faces, toward the street.
+func get_normal() -> Vector3:
+	return global_transform.basis.z.normalized()
+
+
+## Spit lands at uv and wets the glass around it until it dries.
+func spit(uv: Vector2) -> void:
+	if _wet_spots.size() >= MAX_WET_SPOTS:
+		_wet_spots.pop_front()
+	_wet_spots.append(Vector4(uv.x, uv.y, SPIT_RADIUS, SPIT_DRY_SECONDS))
+	_send_wet_spots()
+
+
+## How wet the glass is at uv, from 0 (dry) to 1.
+func wetness_at(uv: Vector2) -> float:
+	var wet := 0.0
+	for spot in _wet_spots:
+		var distance := ((uv - Vector2(spot.x, spot.y)) * glass_size).length() / spot.z
+		wet = maxf(wet, _spot_strength(spot) * (1.0 - smoothstep(0.55, 1.0, distance)))
+	return wet
+
+
+## How much of the dust is left at uv, from 1 (untouched) to 0.
+func dust_left_at(uv: Vector2) -> float:
+	return _state[_state_index(uv) * 4] / 255.0
+
+
+## Grease at uv: what is left of the original marks plus what hands spread.
+func grease_at(uv: Vector2) -> float:
+	var i := _state_index(uv)
+	return minf(1.0, _grease_base[i] / 255.0 * _state[i * 4 + 1] / 255.0 + _state[i * 4 + 3] / 255.0)
+
+
+## Rubs the glass with a bare hand centered on uv, over stroke_length meters.
+## hand_dirt (0 to 1) is how dirty the hand already is: a clean hand takes dirt
+## off, a dirty one smears grease. Returns how much dirtier the hand gets.
+func rub(uv: Vector2, stroke_length: float, hand_dirt: float) -> float:
+	var center := Vector2(uv.x * _state_size.x, uv.y * _state_size.y)
+	var radius := HAND_RADIUS * STATE_PIXELS_PER_METER
+	var reach := ceili(radius)
+	var wet_factor := lerpf(DRY_RUB_FACTOR, 1.0, wetness_at(uv))
+	var picked := 0.0
+	var pixels := 0
+	for py in range(maxi(0, int(center.y) - reach), mini(_state_size.y, int(center.y) + reach + 1)):
+		for px in range(maxi(0, int(center.x) - reach), mini(_state_size.x, int(center.x) + reach + 1)):
+			var distance := Vector2(px + 0.5 - center.x, py + 0.5 - center.y).length() / radius
+			if distance >= 1.0:
+				continue
+			var weight := 1.0 - distance * distance
+			var effect := clampf(stroke_length * RUB_RATE * weight * wet_factor, 0.0, 1.0)
+			var i := (py * _state_size.x + px) * 4
+			var dust := _state[i] / 255.0
+			var grease_left := _state[i + 1] / 255.0
+			var spread := _state[i + 3] / 255.0
+			var base := _grease_base[py * _state_size.x + px] / 255.0
+
+			# Dust comes straight off.
+			var dust_removed := dust * effect
+			# Grease is loosened, and most of it is smeared around before it goes.
+			var grease_loosened := grease_left * effect * GREASE_RESISTANCE
+			var spread_removed := spread * effect * GREASE_RESISTANCE * (1.0 - hand_dirt)
+			spread += base * grease_loosened * GREASE_SPREAD - spread_removed
+			# A dirty hand leaves its grease on the glass.
+			spread += hand_dirt * HAND_DEPOSIT * stroke_length * weight
+			var residue := BARE_HAND_RESIDUE * weight * (0.6 + 0.4 * _breakup.get_noise_2d(px * 3.0, py * 3.0))
+			spread = clampf(maxf(spread, residue), 0.0, 1.0)
+
+			picked += dust_removed * 0.3 + base * grease_loosened * (1.0 - GREASE_SPREAD) + spread_removed
+			pixels += 1
+			# Round down, so that even light rubbing always makes progress.
+			_state[i] = int((dust - dust_removed) * 255.0)
+			_state[i + 1] = int((grease_left - grease_loosened) * 255.0)
+			_state[i + 3] = int(spread * 255.0 + 0.5)
+	_state_changed = true
+	return picked / maxf(pixels, 1) * HAND_PICKUP
+
+
+func _state_index(uv: Vector2) -> int:
+	var x := clampi(int(uv.x * _state_size.x), 0, _state_size.x - 1)
+	var y := clampi(int(uv.y * _state_size.y), 0, _state_size.y - 1)
+	return y * _state_size.x + x
+
+
+func _init_state(grease_image: Image) -> void:
+	_state_size = Vector2i((glass_size * STATE_PIXELS_PER_METER).round())
+	_state_image = Image.create_empty(_state_size.x, _state_size.y, false, Image.FORMAT_RGBA8)
+	_state_image.fill(Color(1, 1, 0, 0))
+	_state = _state_image.get_data()
+	_state_texture = ImageTexture.create_from_image(_state_image)
+	_material.set_shader_parameter("dirt_state", _state_texture)
+	var base := grease_image.duplicate() as Image
+	base.clear_mipmaps()
+	base.resize(_state_size.x, _state_size.y, Image.INTERPOLATE_BILINEAR)
+	_grease_base = base.get_data()
+
+
+## Spit stays fully wet for the first third of its life, then dries out.
+func _spot_strength(spot: Vector4) -> float:
+	return clampf(spot.w / SPIT_DRY_SECONDS * 1.5, 0.0, 1.0)
+
+
+func _send_wet_spots() -> void:
+	var spots: Array[Vector4] = []
+	for spot in _wet_spots:
+		spots.append(Vector4(spot.x, spot.y, spot.z, _spot_strength(spot)))
+	while spots.size() < MAX_WET_SPOTS:
+		spots.append(Vector4.ZERO)
+	_material.set_shader_parameter("wet_spots", spots)
 
 
 func _make_noise_texture() -> ImageTexture:
@@ -37,7 +231,7 @@ func _make_noise_texture() -> ImageTexture:
 
 ## Positions below are in meters: x from the left edge of the glass, y as the
 ## height above the street.
-func _make_grease_pattern() -> ImageTexture:
+func _make_grease_image() -> Image:
 	_pattern_size = Vector2i((glass_size * PIXELS_PER_METER).round())
 	_grease.resize(_pattern_size.x * _pattern_size.y)
 	_grease.fill(0)
@@ -67,7 +261,7 @@ func _make_grease_pattern() -> ImageTexture:
 
 	var image := Image.create_from_data(_pattern_size.x, _pattern_size.y, false, Image.FORMAT_L8, _grease)
 	image.generate_mipmaps()
-	return ImageTexture.create_from_image(image)
+	return image
 
 
 func _handprint(center: Vector2, size: float, angle_degrees: float, strength: float) -> void:

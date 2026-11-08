@@ -1,12 +1,15 @@
 extends Node3D
 ## The street at the foot of the tower, with one dirty bakery window.
-## Captures the mouse on click and shows the start overlay while it is free.
+## Captures the mouse on click, shows the start overlay while it is free, and
+## shows the player's hints while playing.
 
 const BuildInfo := preload("res://scripts/build_info.gd")
 
 @onready var _info: Label = $HUD/Info
 @onready var _start_overlay: Control = $HUD/StartOverlay
 @onready var _crosshair: Control = $HUD/Crosshair
+@onready var _hint: Label = $HUD/Hint
+@onready var _player: WindowWasher = $Player
 
 
 func _ready() -> void:
@@ -38,4 +41,5 @@ func _process(_delta: float) -> void:
 	# In the browser, Escape releases the mouse without Godot seeing the key.
 	var playing := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	_start_overlay.visible = not playing
-	_crosshair.visible = playing
+	_crosshair.visible = playing and not _player.is_rubbing()
+	_hint.text = _player.hint if playing else ""

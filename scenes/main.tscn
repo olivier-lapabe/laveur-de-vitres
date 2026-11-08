@@ -98,6 +98,7 @@ mesh = SubResource("Mesh_neighbour_right")
 
 [node name="Player" parent="." instance=ExtResource("4_player")]
 position = Vector3(0, 0.15, 3.4)
+glass = NodePath("../Storefront/Glass")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
@@ -127,6 +128,25 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.85)
 
+[node name="Hint" type="Label" parent="HUD"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -480.0
+offset_top = -64.0
+offset_right = 480.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="StartOverlay" type="CenterContainer" parent="HUD"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -152,5 +172,8 @@ text = "Cliquez pour commencer
 
 Souris : regarder autour de soi
 ZQSD, WASD ou flèches : marcher
+Clic droit : cracher sur la vitre
+Clic gauche maintenu : frotter avec la main
+E maintenu : s'essuyer les mains
 Échap : libérer la souris"
 horizontal_alignment = 1
