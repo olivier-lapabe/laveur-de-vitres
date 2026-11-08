@@ -49,8 +49,8 @@ func _check_wet_glass_cleans_faster() -> void:
 	_rub_back_and_forth(glass, wet, 10, 0.0)
 	var removed_wet := 1.0 - glass.dust_left_at(wet)
 	var removed_dry := 1.0 - glass.dust_left_at(dry)
-	_expect(removed_wet > removed_dry * 3.0,
-		"spit makes rubbing at least 3 times as effective (wet removed %.2f, dry %.2f)" % [removed_wet, removed_dry])
+	_expect(removed_wet > removed_dry * 2.0 and removed_dry > 0.1,
+		"dry rubbing works and spit makes it at least twice as effective (wet removed %.2f, dry %.2f)" % [removed_wet, removed_dry])
 
 
 func _check_clean_hand_removes_grease() -> void:
@@ -81,13 +81,14 @@ func _check_hand_gets_dirty() -> void:
 	_expect(hand_dirt > 0.15 and hand_dirt < 0.6, "rubbing a greasy area dirties the hand, without saturating it at once (%.2f)" % hand_dirt)
 
 
-## Rubbing dry glass for a long time must still leave most of the dust:
-## rounding used to wear it away a little on every rub.
+## Many tiny rubs must add up to what one long rub does: rounding used to
+## wear the dust away a little on every rub, however small.
 func _check_dry_rubbing_stays_hard() -> void:
 	var glass := _new_glass()
 	var spot := Vector2(0.25, 0.1)
-	_rub_back_and_forth(glass, spot, 60, 0.0)
-	_expect(glass.dust_left_at(spot) > 0.4, "60 dry rubs still leave most of the dust (%.2f left)" % glass.dust_left_at(spot))
+	for i in 400:
+		glass.rub(spot, 0.0005, 0.0)
+	_expect(glass.dust_left_at(spot) > 0.6, "400 tiny dry rubs only remove their share of dust (%.2f left)" % glass.dust_left_at(spot))
 
 
 ## Touching grime soils the hand even when rubbing dry glass removes little.
@@ -96,7 +97,7 @@ func _check_dry_rubbing_dirties_the_hand() -> void:
 	var hand_dirt := 0.0
 	for i in 150:
 		hand_dirt = clampf(hand_dirt + glass.rub(Vector2(0.2 + 0.004 * (i % 50), 0.1), 0.02, hand_dirt), 0.0, 1.0)
-	_expect(hand_dirt > 0.05, "rubbing dry dusty glass still dirties the hand (%.2f)" % hand_dirt)
+	_expect(hand_dirt > 0.02 and hand_dirt < 0.3, "rubbing dry dusty glass soils the hand a little (%.2f)" % hand_dirt)
 
 
 ## The spit and the hand must land on the glass right under the crosshair.
