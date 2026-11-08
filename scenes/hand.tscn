@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Shader" path="res://shaders/skin.gdshader" id="1_skin"]
+[ext_resource type="Shader" path="res://shaders/grime.gdshader" id="1_skin"]
 
 [sub_resource type="ShaderMaterial" id="Material_skin"]
 shader = ExtResource("1_skin")

@@ -1,11 +1,13 @@
 class_name WindowWasher
 extends Node3D
 ## The player, in first person: looks around, walks along the sidewalk, spits
-## on the glass and rubs it with bare hands.
+## on the glass and rubs it, with bare hands in round 1 and a cloth in round 2.
 ##
 ## Mouse: look around. ZQSD/WASD (same physical keys) or arrows: walk.
 ## Hold the left button on the glass to rub: the camera stays still and the
-## mouse moves the hand on the glass. Right button: spit. Hold E: wipe the hands.
+## mouse moves the hand on the glass. Right button: spit.
+## E: with bare hands, hold to wipe them; with the cloth, press to turn it over
+## to its other face, hold to shake it. N: next round.
 
 ## Calm walking pace, in meters per second.
 @export var walk_speed := 1.6
@@ -29,23 +31,27 @@ const CAPTURE_SETTLE_FRAMES := 3
 const MAX_MOUSE_STEP := 250.0
 ## Distance between two rubs along a stroke, in meters.
 const RUB_STEP := 0.02
-## Above this hand dirt, the hand smears more dirt than it removes.
-const DIRTY_HAND := 0.6
-## Seconds for wet hands to dry in the air.
-const HAND_DRY_SECONDS := 10.0
-## Share of the hands' water given to dry glass per meter of rubbing.
-const HAND_WATER_PER_METER := 0.3
+## Above this dirt, the hand or cloth smears more dirt than it removes.
+const DIRTY_TOOL := 0.6
 ## Hand dirt (and water) wiped off per second while wiping.
 const WIPE_SPEED := 0.8
+## Cloth dirt shaken off per second, from the face in use.
+const SHAKE_SPEED := 0.3
+## Holding E longer than this shakes the cloth instead of just turning it over.
+const SHAKE_AFTER_SECONDS := 0.35
 const SPIT_COOLDOWN_MSEC := 500
-## Gap kept between the palm and the glass, in meters.
-const PALM_GAP := 0.018
 
+## 1: bare hands. 2: cloth.
+var round_number := 1
 ## How dirty the hands are, from 0 (clean) to 1 (covered in dirt).
 var hand_dirt := 0.0
 ## How wet the hands are, from 0 (dry) to 1: rubbing wet glass wets them, and
 ## wet hands clean faster anywhere.
 var hand_wet := 0.0
+## How dirty each face of the cloth is, and which face touches the glass.
+var cloth_faces: Array[float] = [0.0, 0.0]
+var cloth_face := 0
+var cloth_wet := 0.0
 ## A short instruction for the HUD, depending on what the player can do.
 var hint := ""
 
@@ -61,6 +67,12 @@ var _last_rub_point := Vector3.ZERO
 var _hand_target := Vector3.ZERO
 var _spit_ready_msec := 0
 var _wiping := false
+var _shaking := false
+var _wipe_held_seconds := 0.0
+var _bare_hands := WashTool.bare_hands()
+var _cloth_tool := WashTool.cloth()
+## Turning the cloth over: from 0 to 1 while it flips, then back to 0.
+var _flip_progress := 0.0
 
 @onready var _head: Node3D = $Head
 @onready var _camera: Camera3D = $Head/Camera3D
@@ -70,6 +82,42 @@ var _wiping := false
 @onready var _left_rest := _left_hand.transform
 ## Both hands share this material, so tinting it dirties both.
 @onready var _skin := ($Head/Camera3D/RightHand/Palm as MeshInstance3D).mesh.get("material") as ShaderMaterial
+@onready var _cloth: MeshInstance3D = $Head/Camera3D/RightHand/Cloth
+@onready var _cloth_material := _cloth.mesh.get("material") as ShaderMaterial
+@onready var _cloth_rest := _cloth.transform
+
+
+## The tool in use this round.
+func current_tool() -> WashTool:
+	return _cloth_tool if round_number == 2 else _bare_hands
+
+
+## How dirty the surface touching the glass is: the hands, or the cloth's face.
+func tool_dirt() -> float:
+	return cloth_faces[cloth_face] if round_number == 2 else hand_dirt
+
+
+func tool_wet() -> float:
+	return cloth_wet if round_number == 2 else hand_wet
+
+
+## Title of the round for the HUD.
+func round_title() -> String:
+	if round_number == 1:
+		return "Manche 1 : mains nues · N : passer au chiffon"
+	return "Manche 2 : chiffon · N : recommencer à mains nues"
+
+
+## Moves to the other round: the glass gets dirty again and the tools clean.
+func next_round() -> void:
+	round_number = 2 if round_number == 1 else 1
+	_stop_rubbing()
+	hand_dirt = 0.0
+	hand_wet = 0.0
+	cloth_faces = [0.0, 0.0]
+	cloth_face = 0
+	cloth_wet = 0.0
+	glass.reset()
 
 
 ## Where the player aims at the glass in the world, or null; for the F3 marker.
@@ -85,6 +133,11 @@ func is_rubbing() -> bool:
 ## Live values for the F3 debug panel (in French, for the PO's playtests).
 func debug_text() -> String:
 	var text := "Saleté des mains : %d %%\nMains humides : %d %%" % [roundi(hand_dirt * 100.0), roundi(hand_wet * 100.0)]
+	if round_number == 2:
+		text += "\nChiffon : face %d sale à %d %%, autre face %d %%, humide %d %%" % [
+			cloth_face + 1, roundi(cloth_faces[cloth_face] * 100.0),
+			roundi(cloth_faces[1 - cloth_face] * 100.0), roundi(cloth_wet * 100.0),
+		]
 	var hit := _glass_hit(_rub_cursor if _rubbing else Vector2.ZERO)
 	if hit.is_empty():
 		return text + "\nVitre : pas visée"
@@ -146,15 +199,32 @@ func _process(delta: float) -> void:
 		_captured_since_msec = Time.get_ticks_msec()
 		_captured_since_frame = Engine.get_process_frames()
 
-	_wiping = Input.is_action_pressed("wipe_hands") and not _rubbing
-	if _wiping:
-		hand_dirt = maxf(0.0, hand_dirt - WIPE_SPEED * delta)
-		hand_wet = maxf(0.0, hand_wet - WIPE_SPEED * delta)
-	hand_wet = maxf(0.0, hand_wet - delta / HAND_DRY_SECONDS)
-	if not _rubbing and not _wiping:
+	if Input.is_action_just_pressed("next_round"):
+		next_round()
+	_update_wiping(delta)
+	hand_wet = maxf(0.0, hand_wet - delta / _bare_hands.dry_seconds)
+	cloth_wet = maxf(0.0, cloth_wet - delta / _cloth_tool.dry_seconds)
+	if not _rubbing and not _wiping and not _shaking:
 		_walk(delta)
 	_update_hands(delta)
 	_update_hint()
+
+
+## E: bare hands are wiped while it is held; the cloth turns over on a short
+## press and is shaken while it is held.
+func _update_wiping(delta: float) -> void:
+	var held := Input.is_action_pressed("wipe_hands") and not _rubbing
+	if round_number == 2 and Input.is_action_just_released("wipe_hands") and _wipe_held_seconds <= SHAKE_AFTER_SECONDS:
+		cloth_face = 1 - cloth_face
+		_flip_progress = 1.0
+	_wipe_held_seconds = _wipe_held_seconds + delta if held else 0.0
+	_wiping = held and round_number == 1
+	_shaking = held and round_number == 2 and _wipe_held_seconds > SHAKE_AFTER_SECONDS
+	if _wiping:
+		hand_dirt = maxf(0.0, hand_dirt - WIPE_SPEED * delta)
+		hand_wet = maxf(0.0, hand_wet - WIPE_SPEED * delta)
+	if _shaking:
+		cloth_faces[cloth_face] = maxf(0.0, cloth_faces[cloth_face] - SHAKE_SPEED * delta)
 
 
 func _capture_settled() -> bool:
@@ -207,12 +277,19 @@ func _touch(point: Vector3) -> void:
 			var at := _last_rub_point + stroke * (float(i + 1) / steps)
 			var uv := glass.uv_at(at)
 			var step_length := stroke.length() / steps
-			hand_dirt = clampf(hand_dirt + glass.rub(uv, step_length, hand_dirt, hand_wet), 0.0, 1.0)
-			# Wet glass wets the hand; dry glass soaks up what the hand carries.
-			hand_wet = maxf(hand_wet - step_length * HAND_WATER_PER_METER, glass.wetness_at(uv))
+			var tool := current_tool()
+			var dirt := clampf(tool_dirt() + glass.rub(uv, step_length, tool_dirt(), tool_wet(), tool), 0.0, 1.0)
+			# Wet glass wets the hand or cloth; dry glass soaks up what it carries.
+			var wet := maxf(tool_wet() - step_length * tool.water_per_meter, glass.wetness_at(uv))
+			if round_number == 2:
+				cloth_faces[cloth_face] = dirt
+				cloth_wet = wet
+			else:
+				hand_dirt = dirt
+				hand_wet = wet
 	_last_rub_point = point
 	_on_glass = true
-	_hand_target = point + glass.get_normal() * PALM_GAP
+	_hand_target = point + glass.get_normal() * current_tool().palm_gap
 
 
 func _spit() -> void:
@@ -228,6 +305,7 @@ func _spit() -> void:
 func _update_hands(delta: float) -> void:
 	_skin.set_shader_parameter("dirt", hand_dirt)
 	_skin.set_shader_parameter("wet", hand_wet)
+	_update_cloth(delta)
 	var weight := clampf(delta * 14.0, 0.0, 1.0)
 	if _rubbing and _on_glass:
 		# Palm flat against the glass, fingers up.
@@ -239,24 +317,46 @@ func _update_hands(delta: float) -> void:
 	_left_hand.position = _left_hand.position.lerp(_rest_pose(_left_rest, -1.0).origin, weight)
 
 
-## The resting pose of a hand, lowered to the overalls while wiping.
+## The cloth shows the dirt of the face toward the glass, flips over when
+## turned and jiggles when shaken.
+func _update_cloth(delta: float) -> void:
+	_cloth.visible = round_number == 2
+	if not _cloth.visible:
+		return
+	_flip_progress = maxf(0.0, _flip_progress - delta * 4.0)
+	_cloth_material.set_shader_parameter("dirt", cloth_faces[cloth_face])
+	_cloth_material.set_shader_parameter("wet", cloth_wet)
+	var pose := _cloth_rest.rotated_local(Vector3.UP, _flip_progress * PI)
+	if _shaking:
+		var t := Time.get_ticks_msec() / 1000.0
+		pose = pose.rotated_local(Vector3.RIGHT, 0.35 * sin(t * 25.0))
+	_cloth.transform = pose
+
+
+## The resting pose of a hand, lowered to the overalls while wiping, or held
+## out while shaking the cloth.
 func _rest_pose(rest: Transform3D, side: float) -> Transform3D:
-	if not _wiping:
-		return rest
 	var t := Time.get_ticks_msec() / 1000.0
-	return rest.translated(Vector3(0.0, -0.2 + 0.04 * sin(t * 18.0 + side), 0.05))
+	if _wiping:
+		return rest.translated(Vector3(0.0, -0.2 + 0.04 * sin(t * 18.0 + side), 0.05))
+	if _shaking and side > 0.0:
+		return rest.translated(Vector3(0.0, 0.06 + 0.04 * sin(t * 25.0), 0.0))
+	return rest
 
 
 func _update_hint() -> void:
+	var dirty := tool_dirt() >= DIRTY_TOOL
+	var cleaning_hint := _cleaning_hint()
 	if _rubbing:
-		if hand_dirt >= DIRTY_HAND:
-			hint = "Vos mains sont sales : elles étalent la saleté. Lâchez et maintenez E pour les essuyer"
+		if dirty:
+			hint = cleaning_hint
 		elif glass.last_rub_was_dry:
-			hint = "À sec, ça part lentement : crachez (clic droit) pour mouiller la vitre et vos mains"
+			hint = "À sec, ça part lentement : crachez (clic droit) pour mouiller la vitre et %s" % (
+				"le chiffon" if round_number == 2 else "vos mains")
 		else:
 			hint = "Bougez la souris pour frotter · relâchez le clic pour lâcher la vitre"
-	elif hand_dirt >= DIRTY_HAND:
-		hint = "Vos mains sont sales : elles étalent la saleté. Maintenez E pour les essuyer"
+	elif dirty:
+		hint = cleaning_hint
 	else:
 		var hit := _glass_hit(Vector2.ZERO)
 		if hit.is_empty():
@@ -265,6 +365,15 @@ func _update_hint() -> void:
 			hint = "Clic droit : cracher · approchez-vous pour frotter"
 		else:
 			hint = "Clic droit : cracher · maintenez le clic gauche pour frotter"
+
+
+## What to do about a dirty hand or cloth.
+func _cleaning_hint() -> String:
+	if round_number == 1:
+		return "Vos mains sont sales : elles étalent la saleté. Lâchez et maintenez E pour les essuyer"
+	if cloth_faces[1 - cloth_face] < DIRTY_TOOL:
+		return "Chiffon sale : il étale la saleté. Lâchez et appuyez sur E pour le retourner"
+	return "Les deux faces du chiffon sont sales : lâchez et maintenez E pour le secouer"
 
 
 ## The glass under a point of the screen, from (0, 0) at the crosshair to

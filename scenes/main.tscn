@@ -141,6 +141,21 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.85)
 
+[node name="Round" type="Label" parent="HUD"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -360.0
+offset_top = 12.0
+offset_right = 360.0
+offset_bottom = 44.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+
 [node name="Hint" type="Label" parent="HUD"]
 anchors_preset = 7
 anchor_left = 0.5
@@ -204,6 +219,8 @@ ZQSD, WASD ou flèches : marcher
 Clic droit : cracher sur la vitre
 Clic gauche maintenu : frotter avec la main
 E maintenu : s'essuyer les mains
+E avec le chiffon : le retourner (maintenu : le secouer)
+N : manche suivante (mains nues, puis chiffon)
 F3 : valeurs de test
 Échap : libérer la souris"
 horizontal_alignment = 1

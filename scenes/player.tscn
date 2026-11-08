@@ -2,6 +2,18 @@
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/hand.tscn" id="2_hand"]
+[ext_resource type="Shader" path="res://shaders/grime.gdshader" id="3_grime"]
+
+[sub_resource type="ShaderMaterial" id="Material_cloth"]
+shader = ExtResource("3_grime")
+shader_parameter/base_color = Color(0.62, 0.74, 0.86, 1)
+shader_parameter/wet_darkening = 0.4
+shader_parameter/wet_shine = 0.2
+shader_parameter/blotch_scale = 45.0
+
+[sub_resource type="BoxMesh" id="Mesh_cloth"]
+material = SubResource("Material_cloth")
+size = Vector3(0.15, 0.17, 0.01)
 
 [node name="Player" type="Node3D"]
 script = ExtResource("1_player")
@@ -21,3 +33,8 @@ rotation_degrees = Vector3(-14, -18, -12)
 position = Vector3(-0.27, -0.3, -0.46)
 rotation_degrees = Vector3(-14, 18, 12)
 scale = Vector3(-1, 1, 1)
+
+[node name="Cloth" type="MeshInstance3D" parent="Head/Camera3D/RightHand"]
+visible = false
+position = Vector3(0, 0.02, -0.022)
+mesh = SubResource("Mesh_cloth")
