@@ -1,0 +1,5 @@
+# Godot cache and generated imports
+.godot/
+
+# Local export output
+/build/

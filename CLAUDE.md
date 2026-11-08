@@ -15,6 +15,7 @@ Keep product content in Confluence and Jira only. A product decision is the PO's
 
 - **One branch and one pull request per change.** The PO plays the build from the PR and merges it himself.
 - **CI is the test bench.** GitHub Actions downloads the pinned Godot version, imports and checks the project headless, exports Web and Windows builds, and deploys the Web build to GitHub Pages (the repo is public). A PR is done when CI is green and its description says what to try in the build.
+- **Every branch push gets a Web preview** at `https://olivier-lapabe.github.io/laveur-de-vitres/preview/<branch>/` (each `/` in the branch name becomes `-`); put that link and the Windows artifact in the PR description. Merging to main publishes at the site root.
 - **Godot may not run in Claude's cloud sandbox**: on 2026-11-08, downloads from `release-assets.githubusercontent.com` were blocked there. Let CI run Godot rather than hunting for another download route.
 - **Stay on the Compatibility renderer.** Godot's Web export only supports it, and GitHub Pages cannot send cross-origin isolation headers, so export the Web build without thread support.
 - **Pin the Godot version once**, in the CI workflow, and keep `project.godot` consistent with it.
