@@ -28,7 +28,10 @@ const HAND_DEPOSIT := 1.5
 ## Film that bare skin always leaves behind: glass washed by hand is never spotless.
 const BARE_HAND_RESIDUE := 0.08
 ## How much dirtier the hand gets per unit of dirt it takes off the glass.
-const HAND_PICKUP := 0.25
+## Dust counts for less than grease (DUST_PICKUP).
+const HAND_PICKUP := 0.35
+## Dust soils the hand this much compared to grease.
+const DUST_PICKUP := 0.15
 ## Radius of the patch one spit wets, in meters.
 const SPIT_RADIUS := 0.22
 ## Seconds before spit has dried.
@@ -174,7 +177,7 @@ func rub(uv: Vector2, stroke_length: float, hand_dirt: float) -> float:
 			var residue := BARE_HAND_RESIDUE * weight * (0.6 + 0.4 * _breakup.get_noise_2d(px * 3.0, py * 3.0))
 			spread = clampf(maxf(spread, residue), 0.0, 1.0)
 
-			picked += dust_removed * 0.3 + base * grease_loosened * (1.0 - GREASE_SPREAD) + spread_removed
+			picked += dust_removed * DUST_PICKUP + base * grease_loosened * (1.0 - GREASE_SPREAD) + spread_removed
 			pixels += 1
 			# Round down, so that even light rubbing always makes progress.
 			_state[i] = int((dust - dust_removed) * 255.0)
