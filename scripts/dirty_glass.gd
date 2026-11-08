@@ -221,7 +221,8 @@ func _spot_freshness(spot: Vector4) -> float:
 
 
 func _send_wet_spots() -> void:
-	var spots: Array[Vector4] = []
+	# A typed array, so the shader gets exactly x, y, z, w for each spot.
+	var spots := PackedVector4Array()
 	for spot in _wet_spots:
 		spots.append(Vector4(spot.x, spot.y, spot.z, _spot_freshness(spot)))
 	while spots.size() < MAX_WET_SPOTS:
