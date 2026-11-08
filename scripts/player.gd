@@ -29,7 +29,7 @@ const CAPTURE_SETTLE_FRAMES := 3
 const MAX_MOUSE_STEP := 250.0
 ## Distance between two rubs along a stroke, in meters.
 const RUB_STEP := 0.02
-## Above this hand dirt, the hand smears more grease than it removes.
+## Above this hand dirt, the hand smears more dirt than it removes.
 const DIRTY_HAND := 0.6
 ## Hand dirt wiped off per second while wiping.
 const WIPE_SPEED := 0.8
@@ -37,7 +37,7 @@ const SPIT_COOLDOWN_MSEC := 500
 ## Gap kept between the palm and the glass, in meters.
 const PALM_GAP := 0.018
 
-## How dirty the hands are, from 0 (clean) to 1 (covered in grease).
+## How dirty the hands are, from 0 (clean) to 1 (covered in dirt).
 var hand_dirt := 0.0
 ## A short instruction for the HUD, depending on what the player can do.
 var hint := ""
@@ -89,12 +89,11 @@ func debug_text() -> String:
 		DisplayServer.window_get_size(),
 		_camera.get_viewport().size,
 	]
-	return text + "\nDistance à la vitre : %.2f m%s\nHumidité ici : %d %%\nPoussière restante ici : %d %%\nGraisse ici : %d %%" % [
+	return text + "\nDistance à la vitre : %.2f m%s\nHumidité ici : %d %%\nSaleté ici : %d %%" % [
 		hit.distance,
 		"" if hit.distance <= hand_reach else " (trop loin pour frotter)",
 		roundi(glass.wetness_at(uv) * 100.0),
-		roundi(glass.dust_left_at(uv) * 100.0),
-		roundi(glass.grease_at(uv) * 100.0),
+		roundi(glass.dirt_at(uv) * 100.0),
 	]
 
 
@@ -237,13 +236,13 @@ func _rest_pose(rest: Transform3D, side: float) -> Transform3D:
 func _update_hint() -> void:
 	if _rubbing:
 		if hand_dirt >= DIRTY_HAND:
-			hint = "Vos mains sont sales : elles étalent la graisse. Lâchez et maintenez E pour les essuyer"
+			hint = "Vos mains sont sales : elles étalent la saleté. Lâchez et maintenez E pour les essuyer"
 		elif glass.last_rub_was_dry:
 			hint = "À sec, ça ne part presque pas : crachez d'abord (clic droit)"
 		else:
 			hint = "Bougez la souris pour frotter · relâchez le clic pour lâcher la vitre"
 	elif hand_dirt >= DIRTY_HAND:
-		hint = "Vos mains sont sales : elles étalent la graisse. Maintenez E pour les essuyer"
+		hint = "Vos mains sont sales : elles étalent la saleté. Maintenez E pour les essuyer"
 	else:
 		var hit := _glass_hit(Vector2.ZERO)
 		if hit.is_empty():

@@ -3,7 +3,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tests/run_tests.gd
 ## Exits with code 1 if a check fails.
 
-## A spot high on the glass, with dust but no grease marks.
+## A spot high on the glass, with haze but no thick marks.
 const CLEAN_SPOT := Vector2(0.5, 0.1)
 ## The middle of an adult handprint (2.45 m from the left, 1.35 m high).
 const HANDPRINT := Vector2(0.766, 0.614)
@@ -18,7 +18,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_check_wet_glass_cleans_faster()
-	_check_clean_hand_removes_grease()
+	_check_clean_hand_removes_dirt()
 	_check_dirty_hand_smears()
 	_check_hand_gets_dirty()
 	_check_aim_hits_the_crosshair()
@@ -44,32 +44,36 @@ func _check_wet_glass_cleans_faster() -> void:
 	var glass := _new_glass()
 	var dry := Vector2(0.25, 0.1)
 	var wet := Vector2(0.75, 0.1)
+	var dry_before := glass.dirt_at(dry)
+	var wet_before := glass.dirt_at(wet)
 	glass.spit(wet)
 	_rub_back_and_forth(glass, dry, 10, 0.0)
 	_rub_back_and_forth(glass, wet, 10, 0.0)
-	var removed_wet := 1.0 - glass.dust_left_at(wet)
-	var removed_dry := 1.0 - glass.dust_left_at(dry)
-	_expect(removed_wet > removed_dry * 2.0 and removed_dry > 0.1,
+	var removed_dry := dry_before - glass.dirt_at(dry)
+	var removed_wet := wet_before - glass.dirt_at(wet)
+	_expect(removed_wet > removed_dry * 2.0 and removed_dry > 0.05,
 		"dry rubbing works and spit makes it at least twice as effective (wet removed %.2f, dry %.2f)" % [removed_wet, removed_dry])
 
 
-func _check_clean_hand_removes_grease() -> void:
+func _check_clean_hand_removes_dirt() -> void:
 	var glass := _new_glass()
-	var before := glass.grease_at(HANDPRINT)
+	var before := glass.dirt_at(HANDPRINT)
 	glass.spit(HANDPRINT)
 	_rub_back_and_forth(glass, HANDPRINT, 60, 0.0)
-	var after := glass.grease_at(HANDPRINT)
-	_expect(before > 0.3, "the handprint starts greasy (%.2f)" % before)
-	_expect(after < before * 0.5, "a clean hand removes most of the grease (%.2f -> %.2f)" % [before, after])
+	var after := glass.dirt_at(HANDPRINT)
+	_expect(before > 0.8, "a handprint is thick dirt (%.2f)" % before)
+	_expect(after < before * 0.5, "a clean wet hand removes most of it (%.2f -> %.2f)" % [before, after])
 	_expect(after > 0.0, "bare hands never leave the glass spotless (%.3f left)" % after)
 
 
 func _check_dirty_hand_smears() -> void:
 	var glass := _new_glass()
-	var before := glass.grease_at(CLEAN_SPOT)
+	glass.spit(CLEAN_SPOT)
+	_rub_back_and_forth(glass, CLEAN_SPOT, 60, 0.0)
+	var before := glass.dirt_at(CLEAN_SPOT)
 	_rub_back_and_forth(glass, CLEAN_SPOT, 20, 1.0)
-	var after := glass.grease_at(CLEAN_SPOT)
-	_expect(after > before + 0.08, "a dirty hand smears grease on clean glass (%.2f -> %.2f)" % [before, after])
+	var after := glass.dirt_at(CLEAN_SPOT)
+	_expect(after > before + 0.08, "a dirty hand smears dirt back on cleaned glass (%.2f -> %.2f)" % [before, after])
 
 
 func _check_hand_gets_dirty() -> void:
@@ -78,26 +82,27 @@ func _check_hand_gets_dirty() -> void:
 	var hand_dirt := 0.0
 	for i in 100:
 		hand_dirt = clampf(hand_dirt + glass.rub(HANDPRINT + Vector2(0.002 * (i % 10), 0.0), 0.02, hand_dirt), 0.0, 1.0)
-	_expect(hand_dirt > 0.15 and hand_dirt < 0.6, "rubbing a greasy area dirties the hand, without saturating it at once (%.2f)" % hand_dirt)
+	_expect(hand_dirt > 0.15 and hand_dirt < 0.6, "cleaning a dirty area dirties the hand, without saturating it at once (%.2f)" % hand_dirt)
 
 
 ## Many tiny rubs must add up to what one long rub does: rounding used to
-## wear the dust away a little on every rub, however small.
+## wear the dirt away a little on every rub, however small.
 func _check_dry_rubbing_stays_hard() -> void:
 	var glass := _new_glass()
 	var spot := Vector2(0.25, 0.1)
+	var before := glass.dirt_at(spot)
 	for i in 400:
 		glass.rub(spot, 0.0005, 0.0)
-	_expect(glass.dust_left_at(spot) > 0.6, "400 tiny dry rubs only remove their share of dust (%.2f left)" % glass.dust_left_at(spot))
+	_expect(glass.dirt_at(spot) > before * 0.6, "400 tiny dry rubs only remove their share of dirt (%.2f -> %.2f)" % [before, glass.dirt_at(spot)])
 
 
-## Touching grime soils the hand even when rubbing dry glass removes little.
+## Touching dirt soils the hand a little even when rubbing dry removes little.
 func _check_dry_rubbing_dirties_the_hand() -> void:
 	var glass := _new_glass()
 	var hand_dirt := 0.0
 	for i in 150:
 		hand_dirt = clampf(hand_dirt + glass.rub(Vector2(0.2 + 0.004 * (i % 50), 0.1), 0.02, hand_dirt), 0.0, 1.0)
-	_expect(hand_dirt > 0.02 and hand_dirt < 0.3, "rubbing dry dusty glass soils the hand a little (%.2f)" % hand_dirt)
+	_expect(hand_dirt > 0.02 and hand_dirt < 0.3, "rubbing dry glass soils the hand a little (%.2f)" % hand_dirt)
 
 
 ## The spit and the hand must land on the glass right under the crosshair.
