@@ -6,6 +6,8 @@ shader_type spatial;
 uniform vec4 skin_color : source_color = vec4(0.72, 0.52, 0.41, 1.0);
 uniform vec4 grime_color : source_color = vec4(0.22, 0.18, 0.12, 1.0);
 uniform float dirt : hint_range(0.0, 1.0) = 0.0;
+// Wet skin is shiny.
+uniform float wet : hint_range(0.0, 1.0) = 0.0;
 // Blotches per meter of skin.
 uniform float blotch_scale = 70.0;
 
@@ -34,5 +36,6 @@ void fragment() {
 	float covered = smoothstep(pattern - 0.08, pattern + 0.08, dirt * 1.15);
 	ALBEDO = mix(skin_color.rgb, grime_color.rgb, covered * 0.92);
 	// Grime is a little greasy.
-	ROUGHNESS = mix(0.75, 0.45, covered);
+	ROUGHNESS = mix(mix(0.75, 0.45, covered), 0.15, wet);
+	SPECULAR = mix(0.5, 0.9, wet);
 }

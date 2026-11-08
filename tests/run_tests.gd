@@ -24,6 +24,7 @@ func _run() -> void:
 	_check_aim_hits_the_crosshair()
 	_check_dry_rubbing_stays_hard()
 	_check_dry_rubbing_dirties_the_hand()
+	_check_wet_hands_clean_faster()
 	print("Gameplay tests: %d failed" % _failures)
 	quit(1 if _failures > 0 else 0)
 
@@ -103,6 +104,21 @@ func _check_dry_rubbing_dirties_the_hand() -> void:
 	for i in 150:
 		hand_dirt = clampf(hand_dirt + glass.rub(Vector2(0.2 + 0.004 * (i % 50), 0.1), 0.02, hand_dirt), 0.0, 1.0)
 	_expect(hand_dirt > 0.02 and hand_dirt < 0.3, "rubbing dry glass soils the hand a little (%.2f)" % hand_dirt)
+
+
+## Hands wet from spit clean dry glass faster than dry hands.
+func _check_wet_hands_clean_faster() -> void:
+	var glass := _new_glass()
+	var with_dry_hand := Vector2(0.25, 0.1)
+	var with_wet_hand := Vector2(0.75, 0.1)
+	var before := glass.dirt_at(with_dry_hand)
+	for i in 10:
+		var offset := Vector2(0.01 if i % 2 == 0 else -0.01, 0.0)
+		glass.rub(with_dry_hand + offset, 0.02, 0.0, 0.0)
+		glass.rub(with_wet_hand + offset, 0.02, 0.0, 1.0)
+	var removed_dry := before - glass.dirt_at(with_dry_hand)
+	var removed_wet := before - glass.dirt_at(with_wet_hand)
+	_expect(removed_wet > removed_dry * 2.0, "wet hands clean dry glass faster (wet hand %.2f, dry hand %.2f)" % [removed_wet, removed_dry])
 
 
 ## The spit and the hand must land on the glass right under the crosshair.

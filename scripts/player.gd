@@ -31,7 +31,11 @@ const MAX_MOUSE_STEP := 250.0
 const RUB_STEP := 0.02
 ## Above this hand dirt, the hand smears more dirt than it removes.
 const DIRTY_HAND := 0.6
-## Hand dirt wiped off per second while wiping.
+## Seconds for wet hands to dry in the air.
+const HAND_DRY_SECONDS := 10.0
+## Share of the hands' water given to dry glass per meter of rubbing.
+const HAND_WATER_PER_METER := 0.3
+## Hand dirt (and water) wiped off per second while wiping.
 const WIPE_SPEED := 0.8
 const SPIT_COOLDOWN_MSEC := 500
 ## Gap kept between the palm and the glass, in meters.
@@ -39,6 +43,9 @@ const PALM_GAP := 0.018
 
 ## How dirty the hands are, from 0 (clean) to 1 (covered in dirt).
 var hand_dirt := 0.0
+## How wet the hands are, from 0 (dry) to 1: rubbing wet glass wets them, and
+## wet hands clean faster anywhere.
+var hand_wet := 0.0
 ## A short instruction for the HUD, depending on what the player can do.
 var hint := ""
 
@@ -77,7 +84,7 @@ func is_rubbing() -> bool:
 
 ## Live values for the F3 debug panel (in French, for the PO's playtests).
 func debug_text() -> String:
-	var text := "Saleté des mains : %d %%" % roundi(hand_dirt * 100.0)
+	var text := "Saleté des mains : %d %%\nMains humides : %d %%" % [roundi(hand_dirt * 100.0), roundi(hand_wet * 100.0)]
 	var hit := _glass_hit(_rub_cursor if _rubbing else Vector2.ZERO)
 	if hit.is_empty():
 		return text + "\nVitre : pas visée"
@@ -142,6 +149,8 @@ func _process(delta: float) -> void:
 	_wiping = Input.is_action_pressed("wipe_hands") and not _rubbing
 	if _wiping:
 		hand_dirt = maxf(0.0, hand_dirt - WIPE_SPEED * delta)
+		hand_wet = maxf(0.0, hand_wet - WIPE_SPEED * delta)
+	hand_wet = maxf(0.0, hand_wet - delta / HAND_DRY_SECONDS)
 	if not _rubbing and not _wiping:
 		_walk(delta)
 	_update_hands(delta)
@@ -196,7 +205,11 @@ func _touch(point: Vector3) -> void:
 		var steps := maxi(1, ceili(stroke.length() / RUB_STEP))
 		for i in steps:
 			var at := _last_rub_point + stroke * (float(i + 1) / steps)
-			hand_dirt = clampf(hand_dirt + glass.rub(glass.uv_at(at), stroke.length() / steps, hand_dirt), 0.0, 1.0)
+			var uv := glass.uv_at(at)
+			var step_length := stroke.length() / steps
+			hand_dirt = clampf(hand_dirt + glass.rub(uv, step_length, hand_dirt, hand_wet), 0.0, 1.0)
+			# Wet glass wets the hand; dry glass soaks up what the hand carries.
+			hand_wet = maxf(hand_wet - step_length * HAND_WATER_PER_METER, glass.wetness_at(uv))
 	_last_rub_point = point
 	_on_glass = true
 	_hand_target = point + glass.get_normal() * PALM_GAP
@@ -214,6 +227,7 @@ func _spit() -> void:
 
 func _update_hands(delta: float) -> void:
 	_skin.set_shader_parameter("dirt", hand_dirt)
+	_skin.set_shader_parameter("wet", hand_wet)
 	var weight := clampf(delta * 14.0, 0.0, 1.0)
 	if _rubbing and _on_glass:
 		# Palm flat against the glass, fingers up.

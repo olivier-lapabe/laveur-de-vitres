@@ -146,12 +146,13 @@ func dirt_at(uv: Vector2) -> float:
 
 ## Rubs the glass with a bare hand centered on uv, over stroke_length meters.
 ## hand_dirt (0 to 1) is how dirty the hand already is: a clean hand takes dirt
-## off, a dirty one smears it back on. Returns how much dirtier the hand gets.
-func rub(uv: Vector2, stroke_length: float, hand_dirt: float) -> float:
+## off, a dirty one smears it back on. hand_wet (0 to 1) is how wet the hand
+## is: a wet hand cleans like wet glass. Returns how much dirtier the hand gets.
+func rub(uv: Vector2, stroke_length: float, hand_dirt: float, hand_wet := 0.0) -> float:
 	var center := Vector2(uv.x * _state_size.x, uv.y * _state_size.y)
 	var radius := HAND_RADIUS * STATE_PIXELS_PER_METER
 	var reach := ceili(radius)
-	var wet_factor := lerpf(DRY_RUB_FACTOR, 1.0, wetness_at(uv))
+	var wet_factor := lerpf(DRY_RUB_FACTOR, 1.0, maxf(wetness_at(uv), hand_wet))
 	var picked := 0.0
 	var pixels := 0
 	for py in range(maxi(0, int(center.y) - reach), mini(_state_size.y, int(center.y) + reach + 1)):
