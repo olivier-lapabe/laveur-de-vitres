@@ -44,8 +44,10 @@ func _check_wet_glass_cleans_faster() -> void:
 	glass.spit(wet)
 	_rub_back_and_forth(glass, dry, 10, 0.0)
 	_rub_back_and_forth(glass, wet, 10, 0.0)
-	_expect(glass.dust_left_at(wet) < glass.dust_left_at(dry),
-		"wet glass loses more dust than dry glass (wet %.2f, dry %.2f)" % [glass.dust_left_at(wet), glass.dust_left_at(dry)])
+	var removed_wet := 1.0 - glass.dust_left_at(wet)
+	var removed_dry := 1.0 - glass.dust_left_at(dry)
+	_expect(removed_wet > removed_dry * 3.0,
+		"spit makes rubbing at least 3 times as effective (wet removed %.2f, dry %.2f)" % [removed_wet, removed_dry])
 
 
 func _check_clean_hand_removes_grease() -> void:
@@ -73,7 +75,7 @@ func _check_hand_gets_dirty() -> void:
 	var hand_dirt := 0.0
 	for i in 100:
 		hand_dirt = clampf(hand_dirt + glass.rub(HANDPRINT + Vector2(0.002 * (i % 10), 0.0), 0.02, hand_dirt), 0.0, 1.0)
-	_expect(hand_dirt > 0.1, "rubbing a greasy area dirties the hand (%.2f)" % hand_dirt)
+	_expect(hand_dirt > 0.3, "rubbing a greasy area clearly dirties the hand (%.2f)" % hand_dirt)
 
 
 func _expect(condition: bool, description: String) -> void:

@@ -183,7 +183,8 @@ func _spit() -> void:
 
 
 func _update_hands(delta: float) -> void:
-	_skin.albedo_color = SKIN_COLOR.lerp(GRIME_COLOR, hand_dirt * 0.85)
+	# A square root so that the first bit of dirt already shows.
+	_skin.albedo_color = SKIN_COLOR.lerp(GRIME_COLOR, sqrt(hand_dirt) * 0.9)
 	var weight := clampf(delta * 14.0, 0.0, 1.0)
 	if _rubbing and _on_glass:
 		# Palm flat against the glass, fingers up.
@@ -205,7 +206,12 @@ func _rest_pose(rest: Transform3D, side: float) -> Transform3D:
 
 func _update_hint() -> void:
 	if _rubbing:
-		hint = "Bougez la souris pour frotter · relâchez le clic pour lâcher la vitre"
+		if hand_dirt >= DIRTY_HAND:
+			hint = "Vos mains sont sales : elles étalent la graisse. Lâchez et maintenez E pour les essuyer"
+		elif glass.last_rub_was_dry:
+			hint = "À sec, ça ne part presque pas : crachez d'abord (clic droit)"
+		else:
+			hint = "Bougez la souris pour frotter · relâchez le clic pour lâcher la vitre"
 	elif hand_dirt >= DIRTY_HAND:
 		hint = "Vos mains sont sales : elles étalent la graisse. Maintenez E pour les essuyer"
 	else:

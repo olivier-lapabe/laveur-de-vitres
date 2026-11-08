@@ -16,9 +16,9 @@ const STATE_PIXELS_PER_METER := 100.0
 ## Radius of the area a hand rubs, in meters.
 const HAND_RADIUS := 0.09
 ## Share of the dirt under the middle of the hand removed per meter of rubbing, on wet glass.
-const RUB_RATE := 8.0
-## Rubbing dry glass works this much as well as rubbing wet glass.
-const DRY_RUB_FACTOR := 0.3
+const RUB_RATE := 7.0
+## Rubbing dry glass works this much as well as rubbing wet glass: barely.
+const DRY_RUB_FACTOR := 0.08
 ## Grease comes off this much as easily as dust.
 const GREASE_RESISTANCE := 0.6
 ## Share of the grease loosened by the hand that gets spread around instead of picked up.
@@ -29,9 +29,9 @@ const HAND_DEPOSIT := 1.5
 const BARE_HAND_RESIDUE := 0.08
 ## How much dirtier the hand gets per unit of dirt it takes off the glass.
 ## Dust counts for less than grease (DUST_PICKUP).
-const HAND_PICKUP := 0.35
+const HAND_PICKUP := 0.9
 ## Dust soils the hand this much compared to grease.
-const DUST_PICKUP := 0.15
+const DUST_PICKUP := 0.1
 ## Radius of the patch one spit wets, in meters.
 const SPIT_RADIUS := 0.22
 ## Seconds before spit has dried.
@@ -59,6 +59,9 @@ var _state_changed := false
 var _grease_base := PackedByteArray()
 ## x, y: UV of the spot; z: radius in meters; w: seconds before it is dry.
 var _wet_spots: Array[Vector4] = []
+
+## Whether the last rub was on dry glass, for the player's hint.
+var last_rub_was_dry := false
 
 @onready var _material := material_override as ShaderMaterial
 
@@ -184,6 +187,7 @@ func rub(uv: Vector2, stroke_length: float, hand_dirt: float) -> float:
 			_state[i + 1] = int((grease_left - grease_loosened) * 255.0)
 			_state[i + 3] = int(spread * 255.0 + 0.5)
 	_state_changed = true
+	last_rub_was_dry = wet_factor < 0.5
 	return picked / maxf(pixels, 1) * HAND_PICKUP
 
 
@@ -208,13 +212,18 @@ func _init_state(grease_image: Image) -> void:
 
 ## Spit stays fully wet for the first third of its life, then dries out.
 func _spot_strength(spot: Vector4) -> float:
-	return clampf(spot.w / SPIT_DRY_SECONDS * 1.5, 0.0, 1.0)
+	return clampf(_spot_freshness(spot), 0.0, 1.0)
+
+
+## From 1.5 when just spat to 0 when dry; above 1 the spit is still frothy.
+func _spot_freshness(spot: Vector4) -> float:
+	return spot.w / SPIT_DRY_SECONDS * 1.5
 
 
 func _send_wet_spots() -> void:
 	var spots: Array[Vector4] = []
 	for spot in _wet_spots:
-		spots.append(Vector4(spot.x, spot.y, spot.z, _spot_strength(spot)))
+		spots.append(Vector4(spot.x, spot.y, spot.z, _spot_freshness(spot)))
 	while spots.size() < MAX_WET_SPOTS:
 		spots.append(Vector4.ZERO)
 	_material.set_shader_parameter("wet_spots", spots)

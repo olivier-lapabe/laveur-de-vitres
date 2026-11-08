@@ -20,7 +20,8 @@ uniform sampler2D noise_texture : hint_default_white, filter_linear_mipmap, repe
 uniform sampler2D grease_pattern : hint_default_black, filter_linear_mipmap, repeat_disable;
 // R: dust left, G: original grease left, A: grease spread by hands.
 uniform sampler2D dirt_state : hint_default_white, filter_linear, repeat_disable;
-// x, y: UV of a spit spot; z: its radius in meters; w: how wet it still is.
+// x, y: UV of a spit spot; z: its radius in meters; w: how wet it still is
+// (1 = fully wet; above 1 the spit is fresh and still frothy, up to 1.5).
 uniform vec4 wet_spots[8];
 
 float dust_at(vec2 uv) {
@@ -40,19 +41,24 @@ float dust_at(vec2 uv) {
 	return clamp(dust, 0.0, 1.0);
 }
 
-float wetness_at(vec2 uv) {
+// Returns (wetness, froth), both from 0 to 1.
+vec2 spit_at(vec2 uv) {
 	// Irregular edges, like a real splash.
 	float wobble = 0.85 + 0.3 * texture(noise_texture, uv * glass_size * 1.5).r;
 	float wet = 0.0;
+	float froth = 0.0;
 	for (int i = 0; i < 8; i++) {
 		vec4 spot = wet_spots[i];
 		if (spot.w <= 0.0) {
 			continue;
 		}
 		float spot_distance = length((uv - spot.xy) * glass_size) / spot.z * wobble;
-		wet = max(wet, spot.w * (1.0 - smoothstep(0.55, 1.0, spot_distance)));
+		float inside = 1.0 - smoothstep(0.55, 1.0, spot_distance);
+		wet = max(wet, min(spot.w, 1.0) * inside);
+		// Fresh spit is frothy in its middle.
+		froth = max(froth, clamp((spot.w - 1.0) * 2.0, 0.0, 1.0) * (1.0 - smoothstep(0.0, 0.6, spot_distance)));
 	}
-	return wet;
+	return vec2(wet, froth);
 }
 
 void fragment() {
@@ -62,21 +68,27 @@ void fragment() {
 	float grease = smoothstep(0.0, 0.55, grease_amount) * grease_strength;
 	// Hands and sleeves pushed the dust aside where they left grease.
 	float dust = dust_at(UV) * state.r * dust_strength * (1.0 - grease * 0.75);
-	float wet = wetness_at(UV);
+	vec2 spit = spit_at(UV);
+	float wet = spit.x;
 
-	// Wet dust turns darker and more see-through.
-	vec3 dust_tint = mix(dust_color.rgb, dust_color.rgb * 0.4, wet);
+	// Wet dust soaks up and turns dark and see-through, like a wet patch on a dusty window.
+	vec3 dust_tint = mix(dust_color.rgb, dust_color.rgb * 0.35, wet);
 	vec3 color = mix(glass_color.rgb, dust_tint, dust);
-	float alpha = mix(glass_color.a, 0.8 * (1.0 - 0.6 * wet), dust);
+	float alpha = mix(glass_color.a, 0.8 * (1.0 - 0.75 * wet), dust);
 	color = mix(color, grease_color.rgb, grease);
 	alpha = mix(alpha, 0.85, grease);
-	// A thin film of water catches a little light.
-	color = mix(color, vec3(0.75, 0.82, 0.88), wet * 0.25);
-	alpha = max(alpha, wet * 0.18);
+	// The edge of the water holds a darker line of dirt.
+	float rim = smoothstep(0.05, 0.35, wet) * (1.0 - smoothstep(0.35, 0.8, wet));
+	color = mix(color, dust_color.rgb * 0.3, rim * 0.6);
+	alpha = max(alpha, rim * 0.55);
+	// Fresh spit: small white bubbles.
+	float bubbles = step(0.72, texture(noise_texture, UV * glass_size * 9.0).r) * spit.y;
+	color = mix(color, vec3(0.95), bubbles);
+	alpha = max(alpha, bubbles * 0.85);
 
 	ALBEDO = color;
 	ALPHA = alpha;
-	// Clean glass is mirror-smooth, dust is matte, grease has an oily sheen, water is glossy.
-	ROUGHNESS = mix(mix(mix(0.03, 0.95, dust), 0.18, grease), 0.04, wet);
-	SPECULAR = mix(mix(mix(0.5, 0.15, dust), 0.7, grease), 0.6, wet);
+	// Clean glass is mirror-smooth, dust is matte, grease has an oily sheen, water is very glossy.
+	ROUGHNESS = mix(mix(mix(0.03, 0.95, dust), 0.18, grease), 0.0, wet);
+	SPECULAR = mix(mix(mix(0.5, 0.15, dust), 0.7, grease), 1.0, wet);
 }
