@@ -78,7 +78,7 @@ func _check_hand_gets_dirty() -> void:
 	var hand_dirt := 0.0
 	for i in 100:
 		hand_dirt = clampf(hand_dirt + glass.rub(HANDPRINT + Vector2(0.002 * (i % 10), 0.0), 0.02, hand_dirt), 0.0, 1.0)
-	_expect(hand_dirt > 0.3, "rubbing a greasy area clearly dirties the hand (%.2f)" % hand_dirt)
+	_expect(hand_dirt > 0.15 and hand_dirt < 0.6, "rubbing a greasy area dirties the hand, without saturating it at once (%.2f)" % hand_dirt)
 
 
 ## Rubbing dry glass for a long time must still leave most of the dust:
@@ -96,7 +96,7 @@ func _check_dry_rubbing_dirties_the_hand() -> void:
 	var hand_dirt := 0.0
 	for i in 150:
 		hand_dirt = clampf(hand_dirt + glass.rub(Vector2(0.2 + 0.004 * (i % 50), 0.1), 0.02, hand_dirt), 0.0, 1.0)
-	_expect(hand_dirt > 0.25, "rubbing dry dusty glass still dirties the hand (%.2f)" % hand_dirt)
+	_expect(hand_dirt > 0.05, "rubbing dry dusty glass still dirties the hand (%.2f)" % hand_dirt)
 
 
 ## The spit and the hand must land on the glass right under the crosshair.

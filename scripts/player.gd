@@ -36,8 +36,6 @@ const WIPE_SPEED := 0.8
 const SPIT_COOLDOWN_MSEC := 500
 ## Gap kept between the palm and the glass, in meters.
 const PALM_GAP := 0.018
-const SKIN_COLOR := Color(0.72, 0.52, 0.41)
-const GRIME_COLOR := Color(0.33, 0.28, 0.2)
 
 ## How dirty the hands are, from 0 (clean) to 1 (covered in grease).
 var hand_dirt := 0.0
@@ -64,7 +62,7 @@ var _wiping := false
 @onready var _right_rest := _right_hand.transform
 @onready var _left_rest := _left_hand.transform
 ## Both hands share this material, so tinting it dirties both.
-@onready var _skin := ($Head/Camera3D/RightHand/Palm as MeshInstance3D).mesh.get("material") as StandardMaterial3D
+@onready var _skin := ($Head/Camera3D/RightHand/Palm as MeshInstance3D).mesh.get("material") as ShaderMaterial
 
 
 ## Where the player aims at the glass in the world, or null; for the F3 marker.
@@ -216,8 +214,7 @@ func _spit() -> void:
 
 
 func _update_hands(delta: float) -> void:
-	# A square root so that the first bit of dirt already shows.
-	_skin.albedo_color = SKIN_COLOR.lerp(GRIME_COLOR, sqrt(hand_dirt) * 0.9)
+	_skin.set_shader_parameter("dirt", hand_dirt)
 	var weight := clampf(delta * 14.0, 0.0, 1.0)
 	if _rubbing and _on_glass:
 		# Palm flat against the glass, fingers up.

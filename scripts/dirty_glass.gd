@@ -24,15 +24,15 @@ const GREASE_RESISTANCE := 0.6
 ## Share of the grease loosened by the hand that gets spread around instead of picked up.
 const GREASE_SPREAD := 0.6
 ## Grease a fully dirty hand leaves per meter of rubbing.
-const HAND_DEPOSIT := 1.5
+const HAND_DEPOSIT := 0.6
 ## Film that bare skin always leaves behind: glass washed by hand is never spotless.
 const BARE_HAND_RESIDUE := 0.08
 ## How much dirtier the hand gets per unit of dirt it takes off the glass.
 ## Dust counts for less than grease (DUST_PICKUP).
-const HAND_PICKUP := 0.9
+const HAND_PICKUP := 0.45
 ## Dirt the hand picks up just by rubbing over it, per meter, even when
 ## nothing comes off (dry glass): touching grime soils the skin.
-const CONTACT_PICKUP := 1.3
+const CONTACT_PICKUP := 0.35
 ## Dust soils the hand this much compared to grease.
 const DUST_PICKUP := 0.1
 ## Radius of the patch one spit wets, in meters.
