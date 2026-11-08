@@ -1,0 +1,148 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_day"]
+sky_top_color = Color(0.32, 0.52, 0.82, 1)
+sky_horizon_color = Color(0.75, 0.82, 0.9, 1)
+ground_bottom_color = Color(0.18, 0.18, 0.2, 1)
+ground_horizon_color = Color(0.75, 0.82, 0.9, 1)
+
+[sub_resource type="Sky" id="Sky_day"]
+sky_material = SubResource("SkyMaterial_day")
+
+[sub_resource type="Environment" id="Environment_street"]
+background_mode = 2
+sky = SubResource("Sky_day")
+ambient_light_source = 3
+ambient_light_energy = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Material_asphalt"]
+albedo_color = Color(0.16, 0.16, 0.17, 1)
+roughness = 0.95
+
+[sub_resource type="PlaneMesh" id="Mesh_street"]
+material = SubResource("Material_asphalt")
+size = Vector2(80, 80)
+
+[sub_resource type="StandardMaterial3D" id="Material_sidewalk"]
+albedo_color = Color(0.55, 0.54, 0.52, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_sidewalk"]
+material = SubResource("Material_sidewalk")
+size = Vector3(24, 0.15, 6)
+
+[sub_resource type="StandardMaterial3D" id="Material_concrete"]
+albedo_color = Color(0.78, 0.76, 0.72, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_tower"]
+material = SubResource("Material_concrete")
+size = Vector3(24, 300, 24)
+
+[sub_resource type="StandardMaterial3D" id="Material_interior"]
+albedo_color = Color(0.45, 0.3, 0.18, 1)
+emission_enabled = true
+emission = Color(1, 0.75, 0.45, 1)
+emission_energy_multiplier = 0.35
+
+[sub_resource type="QuadMesh" id="Mesh_interior"]
+material = SubResource("Material_interior")
+size = Vector2(3.2, 2.2)
+
+[sub_resource type="StandardMaterial3D" id="Material_glass"]
+transparency = 1
+albedo_color = Color(0.8, 0.9, 0.95, 0.25)
+metallic_specular = 1.0
+roughness = 0.05
+
+[sub_resource type="QuadMesh" id="Mesh_glass"]
+material = SubResource("Material_glass")
+size = Vector2(3.2, 2.2)
+
+[sub_resource type="StandardMaterial3D" id="Material_frame"]
+albedo_color = Color(0.2, 0.28, 0.22, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_frame_horizontal"]
+material = SubResource("Material_frame")
+size = Vector3(3.5, 0.15, 0.12)
+
+[sub_resource type="BoxMesh" id="Mesh_frame_vertical"]
+material = SubResource("Material_frame")
+size = Vector3(0.15, 2.5, 0.12)
+
+[sub_resource type="BoxMesh" id="Mesh_sign"]
+material = SubResource("Material_frame")
+size = Vector3(3.5, 0.6, 0.15)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_street")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+
+[node name="Street" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_street")
+
+[node name="Sidewalk" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 3)
+mesh = SubResource("Mesh_sidewalk")
+
+[node name="Tower" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 150, -12)
+mesh = SubResource("Mesh_tower")
+
+[node name="Storefront" type="Node3D" parent="."]
+
+[node name="Interior" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0.01)
+mesh = SubResource("Mesh_interior")
+
+[node name="Glass" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0.04)
+mesh = SubResource("Mesh_glass")
+
+[node name="FrameTop" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.775, 0.06)
+mesh = SubResource("Mesh_frame_horizontal")
+
+[node name="FrameBottom" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.425, 0.06)
+mesh = SubResource("Mesh_frame_horizontal")
+
+[node name="FrameLeft" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.675, 1.6, 0.06)
+mesh = SubResource("Mesh_frame_vertical")
+
+[node name="FrameRight" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.675, 1.6, 0.06)
+mesh = SubResource("Mesh_frame_vertical")
+
+[node name="Sign" type="MeshInstance3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0.075)
+mesh = SubResource("Mesh_sign")
+
+[node name="SignText" type="Label3D" parent="Storefront"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0.16)
+modulate = Color(1, 0.95, 0.85, 1)
+text = "BOULANGERIE"
+font_size = 72
+outline_size = 16
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 3.2)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Info" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 656.0
+offset_bottom = 72.0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 20
+text = "Laveur de vitres"
