@@ -252,7 +252,7 @@ func _update_hint() -> void:
 		if hand_dirt >= DIRTY_HAND:
 			hint = "Vos mains sont sales : elles étalent la saleté. Lâchez et maintenez E pour les essuyer"
 		elif glass.last_rub_was_dry:
-			hint = "À sec, ça ne part presque pas : crachez d'abord (clic droit)"
+			hint = "À sec, ça part lentement : crachez (clic droit) pour mouiller la vitre et vos mains"
 		else:
 			hint = "Bougez la souris pour frotter · relâchez le clic pour lâcher la vitre"
 	elif hand_dirt >= DIRTY_HAND:
