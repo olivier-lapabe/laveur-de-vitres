@@ -21,7 +21,7 @@ uniform sampler2D grease_pattern : hint_default_black, filter_linear_mipmap, rep
 // R: dust left, G: original grease left, A: grease spread by hands.
 uniform sampler2D dirt_state : hint_default_white, filter_linear, repeat_disable;
 // x, y: UV of a spit spot; z: its radius in meters; w: how wet it still is
-// (1 = fully wet; above 1 the spit is fresh and still frothy, up to 1.5).
+// (1 = fully wet; above 1 the spit is fresh and still frothy, up to about 1.67).
 uniform vec4 wet_spots[8];
 
 float dust_at(vec2 uv) {
@@ -56,7 +56,7 @@ vec2 spit_at(vec2 uv) {
 		float inside = 1.0 - smoothstep(0.55, 1.0, spot_distance);
 		wet = max(wet, min(spot.w, 1.0) * inside);
 		// Fresh spit is frothy in its middle.
-		froth = max(froth, clamp((spot.w - 1.0) * 2.0, 0.0, 1.0) * (1.0 - smoothstep(0.0, 0.6, spot_distance)));
+		froth = max(froth, clamp((spot.w - 1.0) * 1.5, 0.0, 1.0) * (1.0 - smoothstep(0.0, 0.6, spot_distance)));
 	}
 	return vec2(wet, froth);
 }

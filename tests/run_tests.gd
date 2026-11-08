@@ -23,6 +23,7 @@ func _run() -> void:
 	_check_hand_gets_dirty()
 	_check_aim_hits_the_crosshair()
 	_check_dry_rubbing_stays_hard()
+	_check_dry_rubbing_dirties_the_hand()
 	print("Gameplay tests: %d failed" % _failures)
 	quit(1 if _failures > 0 else 0)
 
@@ -87,6 +88,15 @@ func _check_dry_rubbing_stays_hard() -> void:
 	var spot := Vector2(0.25, 0.1)
 	_rub_back_and_forth(glass, spot, 60, 0.0)
 	_expect(glass.dust_left_at(spot) > 0.4, "60 dry rubs still leave most of the dust (%.2f left)" % glass.dust_left_at(spot))
+
+
+## Touching grime soils the hand even when rubbing dry glass removes little.
+func _check_dry_rubbing_dirties_the_hand() -> void:
+	var glass := _new_glass()
+	var hand_dirt := 0.0
+	for i in 150:
+		hand_dirt = clampf(hand_dirt + glass.rub(Vector2(0.2 + 0.004 * (i % 50), 0.1), 0.02, hand_dirt), 0.0, 1.0)
+	_expect(hand_dirt > 0.25, "rubbing dry dusty glass still dirties the hand (%.2f)" % hand_dirt)
 
 
 ## The spit and the hand must land on the glass right under the crosshair.

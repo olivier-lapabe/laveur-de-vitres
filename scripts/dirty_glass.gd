@@ -30,12 +30,15 @@ const BARE_HAND_RESIDUE := 0.08
 ## How much dirtier the hand gets per unit of dirt it takes off the glass.
 ## Dust counts for less than grease (DUST_PICKUP).
 const HAND_PICKUP := 0.9
+## Dirt the hand picks up just by rubbing over it, per meter, even when
+## nothing comes off (dry glass): touching grime soils the skin.
+const CONTACT_PICKUP := 0.6
 ## Dust soils the hand this much compared to grease.
 const DUST_PICKUP := 0.1
 ## Radius of the patch one spit wets, in meters.
 const SPIT_RADIUS := 0.22
 ## Seconds before spit has dried.
-const SPIT_DRY_SECONDS := 15.0
+const SPIT_DRY_SECONDS := 25.0
 ## Wet spots tracked at once; must match the shader's wet_spots array.
 const MAX_WET_SPOTS := 8
 
@@ -186,6 +189,7 @@ func rub(uv: Vector2, stroke_length: float, hand_dirt: float) -> float:
 			spread = clampf(maxf(spread, residue), 0.0, 1.0)
 
 			picked += dust_removed * DUST_PICKUP + base * grease_loosened * (1.0 - GREASE_SPREAD) + spread_removed
+			picked += (dust * DUST_PICKUP + base * grease_left + spread) * weight * stroke_length * CONTACT_PICKUP
 			pixels += 1
 			dust -= dust_removed
 			grease_left -= grease_loosened
@@ -226,14 +230,15 @@ func _init_state(grease_image: Image) -> void:
 	_grease_base = base.get_data()
 
 
-## Spit stays fully wet for the first third of its life, then dries out.
+## Spit stays fully wet for the first 40 % of its life (10 s), then dries out.
 func _spot_strength(spot: Vector4) -> float:
 	return clampf(_spot_freshness(spot), 0.0, 1.0)
 
 
-## From 1.5 when just spat to 0 when dry; above 1 the spit is still frothy.
+## From about 1.67 when just spat to 0 when dry; above 1 the spit is still wet
+## through and frothy.
 func _spot_freshness(spot: Vector4) -> float:
-	return spot.w / SPIT_DRY_SECONDS * 1.5
+	return spot.w / SPIT_DRY_SECONDS / 0.6
 
 
 func _send_wet_spots() -> void:
