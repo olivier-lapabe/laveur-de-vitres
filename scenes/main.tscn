@@ -98,7 +98,6 @@ mesh = SubResource("Mesh_neighbour_right")
 
 [node name="Player" parent="." instance=ExtResource("4_player")]
 position = Vector3(0, 0.15, 3.4)
-glass = NodePath("../Storefront/Glass")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 

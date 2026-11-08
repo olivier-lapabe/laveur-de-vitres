@@ -10,9 +10,13 @@ const BuildInfo := preload("res://scripts/build_info.gd")
 @onready var _crosshair: Control = $HUD/Crosshair
 @onready var _hint: Label = $HUD/Hint
 @onready var _player: WindowWasher = $Player
+@onready var _glass: DirtyGlass = $Storefront/Glass
 
 
 func _ready() -> void:
+	_player.glass = _glass
+	if _player.glass == null:
+		push_error("The player has no glass to wash")
 	var version := str(ProjectSettings.get_setting("application/config/version", "?"))
 	_info.text = "Laveur de vitres — prototype du geste\nVersion %s (%s) · Godot %s" % [
 		version,
