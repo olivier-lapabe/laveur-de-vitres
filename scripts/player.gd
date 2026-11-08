@@ -24,9 +24,9 @@ extends Node3D
 ## gets captured: browsers can report one huge jump when the pointer locks.
 const CAPTURE_SETTLE_MSEC := 150
 const CAPTURE_SETTLE_FRAMES := 3
-## Longest mouse movement taken from a single event, in pixels, so that one
-## bogus event cannot spin the view.
-const MAX_MOUSE_STEP := 120.0
+## Mouse events longer than this, in pixels, are dropped: browsers sometimes
+## report the pointer jumping to a screen corner, which no hand does in a frame.
+const MAX_MOUSE_STEP := 250.0
 ## Distance between two rubs along a stroke, in meters.
 const RUB_STEP := 0.02
 ## Above this hand dirt, the hand smears more grease than it removes.
@@ -118,7 +118,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not _capture_settled():
 		return
-	var relative := motion.relative.limit_length(MAX_MOUSE_STEP)
+	if motion.relative.length() > MAX_MOUSE_STEP:
+		return
+	var relative := motion.relative
 	if _rubbing:
 		_move_hand(relative)
 	else:
