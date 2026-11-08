@@ -12,6 +12,11 @@ var _failures := 0
 
 
 func _initialize() -> void:
+	# Nodes only get _ready once the tree runs, so start on the next idle step.
+	_run.call_deferred()
+
+
+func _run() -> void:
 	_check_wet_glass_cleans_faster()
 	_check_clean_hand_removes_grease()
 	_check_dirty_hand_smears()
