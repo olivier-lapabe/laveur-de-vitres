@@ -72,14 +72,19 @@ func _make_grease_pattern() -> ImageTexture:
 
 func _handprint(center: Vector2, size: float, angle_degrees: float, strength: float) -> void:
 	var angle := deg_to_rad(angle_degrees)
-	_smear(center, Vector2(0.045, 0.052) * size, angle_degrees, strength * 0.8)
+	_smear(center, Vector2(0.048, 0.055) * size, angle_degrees, strength * 0.8)
+	# Fingers start inside the palm so the print reads as one hand; only the
+	# fingertips, pressed hardest, show the ridges of a fingerprint.
 	var fingers: Array[Vector2] = [
-		Vector2(-0.032, 0.085), Vector2(-0.011, 0.097), Vector2(0.011, 0.094), Vector2(0.031, 0.08),
+		Vector2(-0.033, 0.075), Vector2(-0.011, 0.085), Vector2(0.011, 0.082), Vector2(0.032, 0.07),
 	]
 	for finger in fingers:
-		_smear(center + (finger * size).rotated(angle), Vector2(0.0105, 0.03) * size, angle_degrees, strength, true)
-	var thumb := Vector2(-0.058, 0.012)
-	_smear(center + (thumb * size).rotated(angle), Vector2(0.012, 0.028) * size, angle_degrees + 35.0, strength, true)
+		var finger_center := center + (finger * size).rotated(angle)
+		_smear(finger_center, Vector2(0.012, 0.038) * size, angle_degrees, strength * 0.85)
+		var tip := center + ((finger + Vector2(0.0, 0.028)) * size).rotated(angle)
+		_smear(tip, Vector2(0.011, 0.013) * size, angle_degrees, strength, true)
+	var thumb := Vector2(-0.06, 0.008)
+	_smear(center + (thumb * size).rotated(angle), Vector2(0.013, 0.034) * size, angle_degrees + 35.0, strength * 0.85)
 
 
 ## Adds an elliptic mark. Ridged marks get the rings of a fingerprint.
