@@ -48,7 +48,8 @@ var hint := ""
 var _captured_since_msec := -1
 var _captured_since_frame := -1
 var _rubbing := false
-## Screen position of the rubbing hand, moved by the mouse while rubbing.
+## Where the rubbing hand is on screen, moved by the mouse while rubbing:
+## (0, 0) is the crosshair, (±1, ±1) the screen corners.
 var _rub_cursor := Vector2.ZERO
 var _on_glass := false
 var _last_rub_point := Vector3.ZERO
@@ -135,11 +136,11 @@ func _walk(delta: float) -> void:
 
 
 func _start_rubbing() -> void:
-	var hit := _glass_hit(_screen_center())
+	var hit := _glass_hit(Vector2.ZERO)
 	if hit.is_empty() or hit.distance > hand_reach:
 		return
 	_rubbing = true
-	_rub_cursor = _screen_center()
+	_rub_cursor = Vector2.ZERO
 	_on_glass = false
 	_touch(hit.point)
 
@@ -151,7 +152,8 @@ func _stop_rubbing() -> void:
 
 ## While rubbing, the mouse moves the hand across the glass.
 func _move_hand(relative: Vector2) -> void:
-	_rub_cursor = (_rub_cursor + relative).clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
+	var half_screen := get_viewport().get_visible_rect().size / 2.0
+	_rub_cursor = (_rub_cursor + Vector2(relative.x, -relative.y) / half_screen).clamp(-Vector2.ONE, Vector2.ONE)
 	var hit := _glass_hit(_rub_cursor)
 	if hit.is_empty() or hit.distance > hand_reach:
 		_on_glass = false
@@ -175,7 +177,7 @@ func _touch(point: Vector3) -> void:
 func _spit() -> void:
 	if _rubbing or Time.get_ticks_msec() < _spit_ready_msec:
 		return
-	var hit := _glass_hit(_screen_center())
+	var hit := _glass_hit(Vector2.ZERO)
 	if hit.is_empty() or hit.distance > spit_reach:
 		return
 	glass.spit(hit.uv)
@@ -215,7 +217,7 @@ func _update_hint() -> void:
 	elif hand_dirt >= DIRTY_HAND:
 		hint = "Vos mains sont sales : elles étalent la graisse. Maintenez E pour les essuyer"
 	else:
-		var hit := _glass_hit(_screen_center())
+		var hit := _glass_hit(Vector2.ZERO)
 		if hit.is_empty():
 			hint = ""
 		elif hit.distance > hand_reach:
@@ -224,11 +226,16 @@ func _update_hint() -> void:
 			hint = "Clic droit : cracher · maintenez le clic gauche pour frotter"
 
 
-func _screen_center() -> Vector2:
-	return get_viewport().get_visible_rect().size / 2.0
-
-
-func _glass_hit(screen_position: Vector2) -> Dictionary:
+## The glass under a point of the screen, from (0, 0) at the crosshair to
+## (±1, ±1) at the corners (y up). The ray is built from the camera's own
+## direction and field of view: in the browser, the camera's notion of screen
+## pixels does not always match the viewport's, which put the spit off target.
+func _glass_hit(screen_point: Vector2) -> Dictionary:
 	if glass == null:
 		return {}
-	return glass.intersect(_camera.project_ray_origin(screen_position), _camera.project_ray_normal(screen_position))
+	var size := get_viewport().get_visible_rect().size
+	var half_height := tan(deg_to_rad(_camera.fov) / 2.0)
+	var half_width := half_height * size.x / maxf(size.y, 1.0)
+	var camera_basis := _camera.global_transform.basis
+	var direction := (camera_basis * Vector3(screen_point.x * half_width, screen_point.y * half_height, -1.0)).normalized()
+	return glass.intersect(_camera.global_position, direction)

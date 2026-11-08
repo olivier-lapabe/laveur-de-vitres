@@ -21,6 +21,7 @@ func _run() -> void:
 	_check_clean_hand_removes_grease()
 	_check_dirty_hand_smears()
 	_check_hand_gets_dirty()
+	_check_aim_hits_the_crosshair()
 	print("Gameplay tests: %d failed" % _failures)
 	quit(1 if _failures > 0 else 0)
 
@@ -76,6 +77,22 @@ func _check_hand_gets_dirty() -> void:
 	for i in 100:
 		hand_dirt = clampf(hand_dirt + glass.rub(HANDPRINT + Vector2(0.002 * (i % 10), 0.0), 0.02, hand_dirt), 0.0, 1.0)
 	_expect(hand_dirt > 0.3, "rubbing a greasy area clearly dirties the hand (%.2f)" % hand_dirt)
+
+
+## The spit and the hand must land on the glass right under the crosshair.
+func _check_aim_hits_the_crosshair() -> void:
+	var main: Node3D = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	var player := main.get_node("Player") as WindowWasher
+	player.position = Vector3(0.5, 0.15, 2.0)
+	player.rotation = Vector3.ZERO
+	player.get_node("Head").rotation = Vector3.ZERO
+	var hit: Dictionary = player._glass_hit(Vector2.ZERO)
+	# Eyes at 1.85 m, looking straight at the glass (centre 1.6 m high, 3.2 m by 2.2 m).
+	var expected := Vector2(0.5 / 3.2 + 0.5, 0.5 - (1.85 - 1.6) / 2.2)
+	_expect(not hit.is_empty() and (hit.uv as Vector2).distance_to(expected) < 0.01,
+		"aiming hits the glass under the crosshair (got %s, expected %s)" % [hit.get("uv"), expected])
+	main.queue_free()
 
 
 func _expect(condition: bool, description: String) -> void:
