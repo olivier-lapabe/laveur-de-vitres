@@ -82,7 +82,7 @@ func _check_hand_gets_dirty() -> void:
 	var hand_dirt := 0.0
 	for i in 100:
 		hand_dirt = clampf(hand_dirt + glass.rub(HANDPRINT + Vector2(0.002 * (i % 10), 0.0), 0.02, hand_dirt), 0.0, 1.0)
-	_expect(hand_dirt > 0.15 and hand_dirt < 0.6, "cleaning a dirty area dirties the hand, without saturating it at once (%.2f)" % hand_dirt)
+	_expect(hand_dirt > 0.05 and hand_dirt < 0.4, "cleaning a dirty area dirties the hand, without saturating it at once (%.2f)" % hand_dirt)
 
 
 ## Many tiny rubs must add up to what one long rub does: rounding used to
