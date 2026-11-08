@@ -1,8 +1,9 @@
 [gd_scene format=3]
 
-[sub_resource type="StandardMaterial3D" id="Material_skin"]
-albedo_color = Color(0.72, 0.52, 0.41, 1)
-roughness = 0.75
+[ext_resource type="Shader" path="res://shaders/skin.gdshader" id="1_skin"]
+
+[sub_resource type="ShaderMaterial" id="Material_skin"]
+shader = ExtResource("1_skin")
 
 [sub_resource type="StandardMaterial3D" id="Material_sleeve"]
 albedo_color = Color(0.16, 0.22, 0.34, 1)
