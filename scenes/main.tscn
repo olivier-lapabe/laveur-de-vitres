@@ -71,6 +71,7 @@ environment = SubResource("Environment_street")
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-38, -55, 0)
 light_color = Color(1, 0.95, 0.88, 1)
+light_energy = 0.9
 shadow_enabled = true
 directional_shadow_max_distance = 40.0
 

@@ -4,7 +4,7 @@ shader_type spatial;
 // world space so any box gets floors of the same height. Below
 // ground_floor_height the wall is plain stone, where the shops are.
 
-uniform vec4 wall_color : source_color = vec4(0.74, 0.72, 0.68, 1.0);
+uniform vec4 wall_color : source_color = vec4(0.66, 0.64, 0.6, 1.0);
 uniform vec4 window_color : source_color = vec4(0.2, 0.27, 0.34, 1.0);
 uniform vec4 ground_floor_color : source_color = vec4(0.52, 0.5, 0.47, 1.0);
 uniform float floor_height = 3.2;

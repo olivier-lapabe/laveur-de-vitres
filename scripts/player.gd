@@ -9,12 +9,21 @@ extends Node3D
 ## The part of the sidewalk the player can walk on (x and z only).
 @export var walk_area := Rect2(-6.0, 1.4, 12.0, 4.1)
 
+## Mouse movement is ignored this long after the mouse gets captured: browsers
+## can report one huge jump when the pointer locks.
+const CAPTURE_SETTLE_MSEC := 150
+
+## When the mouse got captured, or -1 while it is free.
+var _captured_since_msec := -1
+
 @onready var _head: Node3D = $Head
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	var motion := event as InputEventMouseMotion
 	if motion == null or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		return
+	if _captured_since_msec < 0 or Time.get_ticks_msec() - _captured_since_msec < CAPTURE_SETTLE_MSEC:
 		return
 	rotate_y(-motion.relative.x * mouse_sensitivity)
 	_head.rotate_x(-motion.relative.y * mouse_sensitivity)
@@ -23,7 +32,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		_captured_since_msec = -1
 		return
+	if _captured_since_msec < 0:
+		_captured_since_msec = Time.get_ticks_msec()
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var step := global_transform.basis * Vector3(input.x, 0.0, input.y)
 	step.y = 0.0
