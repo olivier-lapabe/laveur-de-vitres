@@ -20,9 +20,13 @@ extends Node3D
 ## How far the player can spit, in meters.
 @export var spit_reach := 2.5
 
-## Mouse movement is ignored this long after the mouse gets captured: browsers
-## can report one huge jump when the pointer locks.
+## Mouse movement is ignored for this long and this many frames after the mouse
+## gets captured: browsers can report one huge jump when the pointer locks.
 const CAPTURE_SETTLE_MSEC := 150
+const CAPTURE_SETTLE_FRAMES := 3
+## Longest mouse movement taken from a single event, in pixels, so that one
+## bogus event cannot spin the view.
+const MAX_MOUSE_STEP := 120.0
 ## Distance between two rubs along a stroke, in meters.
 const RUB_STEP := 0.02
 ## Above this hand dirt, the hand smears more grease than it removes.
@@ -42,6 +46,7 @@ var hint := ""
 
 ## When the mouse got captured, or -1 while it is free.
 var _captured_since_msec := -1
+var _captured_since_frame := -1
 var _rubbing := false
 ## Screen position of the rubbing hand, moved by the mouse while rubbing.
 var _rub_cursor := Vector2.ZERO
@@ -81,19 +86,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	var motion := event as InputEventMouseMotion
 	if motion == null:
 		return
-	if _captured_since_msec < 0 or Time.get_ticks_msec() - _captured_since_msec < CAPTURE_SETTLE_MSEC:
+	if not _capture_settled():
 		return
+	var relative := motion.relative.limit_length(MAX_MOUSE_STEP)
 	if _rubbing:
-		_move_hand(motion.relative)
+		_move_hand(relative)
 	else:
-		rotate_y(-motion.relative.x * mouse_sensitivity)
-		_head.rotate_x(-motion.relative.y * mouse_sensitivity)
+		rotate_y(-relative.x * mouse_sensitivity)
+		_head.rotate_x(-relative.y * mouse_sensitivity)
 		_head.rotation.x = clampf(_head.rotation.x, deg_to_rad(-85.0), deg_to_rad(85.0))
 
 
 func _process(delta: float) -> void:
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		_captured_since_msec = -1
+		_captured_since_frame = -1
 		_stop_rubbing()
 		_wiping = false
 		hint = ""
@@ -101,6 +108,7 @@ func _process(delta: float) -> void:
 		return
 	if _captured_since_msec < 0:
 		_captured_since_msec = Time.get_ticks_msec()
+		_captured_since_frame = Engine.get_process_frames()
 
 	_wiping = Input.is_action_pressed("wipe_hands") and not _rubbing
 	if _wiping:
@@ -109,6 +117,12 @@ func _process(delta: float) -> void:
 		_walk(delta)
 	_update_hands(delta)
 	_update_hint()
+
+
+func _capture_settled() -> bool:
+	return (_captured_since_msec >= 0
+		and Time.get_ticks_msec() - _captured_since_msec >= CAPTURE_SETTLE_MSEC
+		and Engine.get_process_frames() - _captured_since_frame >= CAPTURE_SETTLE_FRAMES)
 
 
 func _walk(delta: float) -> void:
