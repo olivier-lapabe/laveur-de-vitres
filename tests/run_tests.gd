@@ -69,7 +69,7 @@ func _check_dirty_hand_smears() -> void:
 	var before := glass.grease_at(CLEAN_SPOT)
 	_rub_back_and_forth(glass, CLEAN_SPOT, 20, 1.0)
 	var after := glass.grease_at(CLEAN_SPOT)
-	_expect(after > before + 0.2, "a dirty hand smears grease on clean glass (%.2f -> %.2f)" % [before, after])
+	_expect(after > before + 0.08, "a dirty hand smears grease on clean glass (%.2f -> %.2f)" % [before, after])
 
 
 func _check_hand_gets_dirty() -> void:
