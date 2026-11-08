@@ -67,6 +67,12 @@ var _wiping := false
 @onready var _skin := ($Head/Camera3D/RightHand/Palm as MeshInstance3D).mesh.get("material") as StandardMaterial3D
 
 
+## Where the player aims at the glass in the world, or null; for the F3 marker.
+func aim_point() -> Variant:
+	var hit := _glass_hit(_rub_cursor if _rubbing else Vector2.ZERO)
+	return null if hit.is_empty() else hit.point
+
+
 func is_rubbing() -> bool:
 	return _rubbing
 
@@ -78,6 +84,13 @@ func debug_text() -> String:
 	if hit.is_empty():
 		return text + "\nVitre : pas visée"
 	var uv: Vector2 = hit.uv
+	var on_screen := _camera.unproject_position(hit.point)
+	text += "\nVisée à l'écran : (%d, %d) · vue %s · fenêtre %s · caméra %s" % [
+		on_screen.x, on_screen.y,
+		get_viewport().get_visible_rect().size,
+		DisplayServer.window_get_size(),
+		_camera.get_viewport().size,
+	]
 	return text + "\nDistance à la vitre : %.2f m%s\nHumidité ici : %d %%\nPoussière restante ici : %d %%\nGraisse ici : %d %%" % [
 		hit.distance,
 		"" if hit.distance <= hand_reach else " (trop loin pour frotter)",

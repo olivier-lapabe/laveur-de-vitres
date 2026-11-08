@@ -10,6 +10,7 @@ const BuildInfo := preload("res://scripts/build_info.gd")
 @onready var _crosshair: Control = $HUD/Crosshair
 @onready var _hint: Label = $HUD/Hint
 @onready var _debug: Label = $HUD/Debug
+@onready var _aim_marker: Node3D = $AimMarker
 @onready var _player: WindowWasher = $Player
 @onready var _glass: DirtyGlass = $Storefront/Glass
 
@@ -55,3 +56,7 @@ func _process(_delta: float) -> void:
 	_hint.text = _player.hint if playing else ""
 	if _debug.visible:
 		_debug.text = _player.debug_text()
+	var aim: Variant = _player.aim_point() if _debug.visible else null
+	_aim_marker.visible = aim != null
+	if aim != null:
+		_aim_marker.global_position = aim

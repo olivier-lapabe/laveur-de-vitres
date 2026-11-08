@@ -62,6 +62,16 @@ size = Vector3(20, 18, 20)
 material = SubResource("Material_neighbour")
 size = Vector3(20, 11, 20)
 
+[sub_resource type="StandardMaterial3D" id="Material_aim_marker"]
+shading_mode = 0
+albedo_color = Color(1, 0, 0, 1)
+no_depth_test = true
+
+[sub_resource type="SphereMesh" id="Mesh_aim_marker"]
+material = SubResource("Material_aim_marker")
+radius = 0.012
+height = 0.024
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
 
@@ -98,6 +108,10 @@ mesh = SubResource("Mesh_neighbour_right")
 
 [node name="Player" parent="." instance=ExtResource("4_player")]
 position = Vector3(0, 0.15, 3.4)
+
+[node name="AimMarker" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_aim_marker")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
