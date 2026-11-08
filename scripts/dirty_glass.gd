@@ -25,7 +25,7 @@ const HAND_DEPOSIT := 0.3
 ## Film that bare skin always leaves behind: glass washed by hand is never spotless.
 const BARE_HAND_RESIDUE := 0.08
 ## How much dirtier the hand gets per unit of dirt it takes off the glass.
-const HAND_PICKUP := 0.15
+const HAND_PICKUP := 0.2
 ## Dirt the hand picks up just by rubbing over it, per meter, even when
 ## little comes off (dry glass): touching grime soils the skin a little.
 const CONTACT_PICKUP := 0.1
